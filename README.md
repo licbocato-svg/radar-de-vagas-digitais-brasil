@@ -31,7 +31,7 @@ ponto de partida para os próximos coletores.
 │   │   ├── base.py                  # Contrato para futuros coletores
 │   │   └── empty.py                 # Coletor vazio, sem rede
 │   ├── publishing/
-│   │   └── telegram.py              # Contrato e formatador para Telegram
+│   │   └── telegram.py              # API oficial e formatador para Telegram
 │   └── storage/
 │       └── seen_jobs.py             # Deduplicação persistente em JSON local
 ├── tests/
@@ -51,6 +51,12 @@ Requer Python 3.11 ou superior.
 ```bash
 # Executa o pipeline inicial sem coletores externos
 python -m radar_vagas
+
+# Verifica o token com getMe, sem enviar mensagem
+python -m radar_vagas --check-telegram
+
+# Envia uma mensagem fixa de teste, somente com confirmação explícita
+python -m radar_vagas --send-test --confirm-send-test
 
 # Executa os testes da lógica local
 python -m unittest discover -s tests -v
@@ -74,23 +80,49 @@ radar-vagas
    desconhecida não é assumida como elegível.
 5. `SeenJobStore` registra fingerprints em `data/seen_jobs.json` para que uma
    vaga aceita não seja processada novamente entre execuções.
-6. `publishing/telegram.py` define o contrato e o formato da mensagem que um
-   publicador oficial poderá usar futuramente. Nesta versão ele não faz
-   requisições.
+6. `publishing/telegram.py` usa a API HTTP oficial do Telegram com a biblioteca
+   padrão do Python. `--check-telegram` chama apenas `getMe`; o envio só ocorre
+   com `--send-test --confirm-send-test`.
 
 ## Variáveis de ambiente
 
 Copie `.env.example` apenas como referência. O código lê:
 
 - `RADAR_DATA_DIR`: diretório do arquivo local de deduplicação.
-- `TELEGRAM_BOT_TOKEN`: reservado para o futuro bot, ainda não utilizado.
-- `TELEGRAM_CHAT_ID`: reservado para o futuro grupo, ainda não utilizado.
+- `TELEGRAM_BOT_TOKEN`: token do bot criado no BotFather.
+- `TELEGRAM_CHAT_ID`: identificador do grupo de destino.
+- `TELEGRAM_THREAD_ID`: identificador do tópico do grupo; pode ficar ausente
+  quando a mensagem deve ir para o tópico geral.
 - `RADAR_TIMEZONE`: fuso operacional, com padrão `America/Sao_Paulo`.
 - `RADAR_LOG_LEVEL`: nível de logs, com padrão `INFO`.
 
-Não coloque tokens no código ou no repositório. Quando a integração do
-Telegram for adicionada, os valores deverão ser fornecidos pelo mecanismo de
-segredos do ambiente.
+### Onde cadastrar os três valores
+
+No editor do Replit:
+
+1. Abra o painel **Tools**.
+2. Selecione **Secrets**.
+3. Clique em **+ New secret**.
+4. Cadastre exatamente estes nomes, um por vez, e seus respectivos valores:
+   `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` e `TELEGRAM_THREAD_ID`.
+5. Clique em **Add Secret** para cada item.
+
+Os Secrets são criptografados pelo Replit e ficam disponíveis ao programa como
+variáveis de ambiente. Eles não devem ser colocados no código, no
+`.env.example`, no README ou no chat. A documentação oficial está em
+<https://docs.replit.com/core-concepts/project-editor/app-setup/secrets>.
+
+Depois do cadastro, rode primeiro `python -m radar_vagas --check-telegram`.
+Esse comando confirma o bot com `getMe` e não publica nada. Quando quiser
+autorizar o envio da mensagem fixa de teste, use explicitamente:
+
+```bash
+python -m radar_vagas --send-test --confirm-send-test
+```
+
+O comando faz uma verificação `getMe` antes e, em seguida, usa `sendMessage`
+com `TELEGRAM_CHAT_ID` e, quando preenchido, `TELEGRAM_THREAD_ID`. Ele nunca
+envia vagas reais nessa etapa.
 
 ## Próximos passos sugeridos
 

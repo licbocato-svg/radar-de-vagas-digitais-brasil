@@ -8,6 +8,12 @@ import asyncio
 from radar_vagas.collectors.empty import EmptyCollector
 from radar_vagas.config import Settings
 from radar_vagas.core.pipeline import JobPipeline
+from radar_vagas.publishing.telegram import (
+    TEST_MESSAGE,
+    TelegramApiError,
+    TelegramBotClient,
+    TelegramConfig,
+)
 from radar_vagas.storage.seen_jobs import JsonSeenJobStore
 
 
@@ -24,11 +30,65 @@ async def _run() -> int:
     return 0
 
 
+async def _check_telegram() -> int:
+    try:
+        client = TelegramBotClient(TelegramConfig.from_settings(Settings.from_env()))
+        bot = await client.get_me()
+    except (RuntimeError, TelegramApiError) as error:
+        print(f"Falha na verificação do Telegram: {error}")
+        return 1
+
+    username = bot.get("username")
+    if username:
+        print(f"Conexão com o bot confirmada (@{username}).")
+    else:
+        print("Conexão com o bot confirmada.")
+    print("Nenhuma mensagem foi enviada.")
+    return 0
+
+
+async def _send_telegram_test() -> int:
+    try:
+        client = TelegramBotClient(TelegramConfig.from_settings(Settings.from_env()))
+        await client.get_me()
+        await client.send_message(TEST_MESSAGE)
+    except (RuntimeError, TelegramApiError) as error:
+        print(f"Falha no teste do Telegram: {error}")
+        return 1
+
+    print("Mensagem de teste enviada ao destino configurado.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Executa o pipeline inicial do Radar sem integrações externas."
     )
-    parser.parse_args()
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument(
+        "--check-telegram",
+        action="store_true",
+        help="valida o bot com getMe, sem enviar mensagens",
+    )
+    actions.add_argument(
+        "--send-test",
+        action="store_true",
+        help="envia a mensagem de teste (exige --confirm-send-test)",
+    )
+    parser.add_argument(
+        "--confirm-send-test",
+        action="store_true",
+        help="confirma explicitamente o envio da mensagem de teste",
+    )
+    arguments = parser.parse_args()
+    if arguments.confirm_send_test and not arguments.send_test:
+        parser.error("--confirm-send-test só pode ser usado com --send-test")
+    if arguments.send_test and not arguments.confirm_send_test:
+        parser.error("--send-test exige --confirm-send-test")
+    if arguments.check_telegram:
+        return asyncio.run(_check_telegram())
+    if arguments.send_test:
+        return asyncio.run(_send_telegram_test())
     return asyncio.run(_run())
 
 
