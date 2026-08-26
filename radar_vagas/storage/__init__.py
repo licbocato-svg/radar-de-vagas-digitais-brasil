@@ -1,0 +1,1 @@
+"""Persistência local de estado do Radar."""

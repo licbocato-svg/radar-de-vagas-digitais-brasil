@@ -1,0 +1,1 @@
+"""Regras de domínio independentes de plataformas externas."""

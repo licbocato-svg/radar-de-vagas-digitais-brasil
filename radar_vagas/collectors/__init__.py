@@ -1,0 +1,1 @@
+"""Coletores de vagas por plataforma."""

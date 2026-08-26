@@ -1,0 +1,1 @@
+"""Publicadores para canais de distribuição."""

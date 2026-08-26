@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "radar-vagas-digitais-brasil"
+version = "0.1.0"
+description = "Base modular para monitorar vagas digitais remotas elegíveis no Brasil."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+radar-vagas = "radar_vagas.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["radar_vagas*"]

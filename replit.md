@@ -1,17 +1,21 @@
-# [Project name]
+# Radar de Vagas Digitais Brasil
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Base modular em Python para coletar, filtrar, deduplicar e futuramente publicar
+vagas digitais remotas elegíveis para residentes no Brasil.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `python -m radar_vagas` — executa o pipeline inicial sem rede
+- `python -m unittest discover -s tests -v` — valida a lógica local
+- `pnpm --filter @workspace/api-server run dev` — servidor legado da base Replit
+- `pnpm run typecheck` — valida os pacotes TypeScript existentes
 
 ## Stack
+
+- Python 3.11+ para o Radar, somente biblioteca padrão nesta fase
+- Coletores, filtros, deduplicação e publicação separados por módulo
+- Deduplicação persistente em JSON local, substituível por outro storage
+- Telegram reservado atrás de um contrato, sem cliente ou token nesta fase
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5
@@ -22,23 +26,41 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `radar_vagas/core/` — modelos e regras de negócio
+- `radar_vagas/collectors/` — contratos e futuros adaptadores de plataformas
+- `radar_vagas/storage/` — estado local para fingerprints
+- `radar_vagas/publishing/` — contratos de distribuição, incluindo Telegram
+- `tests/` — testes da lógica sem chamadas externas
+- `README.md` — guia principal e próximos passos
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- A primeira versão usa apenas a biblioteca padrão para manter o núcleo testável
+  e sem dependências externas.
+- A elegibilidade é conservadora: uma vaga remota sem país declarado não é
+  presumida como válida para o Brasil.
+- Cada coletor entrega o mesmo modelo de domínio, evitando acoplamento entre
+  plataformas.
+- O estado de duplicatas é local e atômico, com uma interface que permite
+  trocar o armazenamento sem alterar o pipeline.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+O produto monitorará vagas de avaliação digital, aplicará critérios de cargo e
+localização, evitará republicações e poderá publicar novas oportunidades em um
+grupo do Telegram após as integrações serem implementadas.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Não conectar plataformas externas nem inserir tokens secretos durante a
+  estruturação inicial.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Não assumir que uma vaga marcada apenas como “remota” aceita residentes no
+  Brasil; a fonte deve informar Brasil, cobertura global ou equivalente.
+- Não adicionar tokens no código; use o mecanismo de segredos do ambiente quando
+  o publicador do Telegram for implementado.
 
 ## Pointers
 
