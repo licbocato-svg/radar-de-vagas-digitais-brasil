@@ -31,12 +31,13 @@ ponto de partida para os próximos coletores.
 │   │   ├── base.py                  # Contrato para futuros coletores
 │   │   └── empty.py                 # Coletor vazio, sem rede
 │   ├── publishing/
-│   │   └── telegram.py              # API oficial e formatador para Telegram
+│   │   └── telegram.py              # API oficial, leitura e formatador
 │   └── storage/
 │       └── seen_jobs.py             # Deduplicação persistente em JSON local
 ├── tests/
 │   ├── test_filtering.py            # Testes de cargos e elegibilidade
-│   └── test_deduplication.py       # Testes de fingerprints e duplicatas
+│   ├── test_deduplication.py        # Testes de fingerprints e duplicatas
+│   └── test_telegram.py             # Testes HTTP simulados, sem rede
 ├── data/
 │   └── .gitkeep                     # Dados locais ficam fora do versionamento
 ├── .env.example                     # Nomes das variáveis, sem valores secretos
@@ -54,6 +55,9 @@ python -m radar_vagas
 
 # Verifica o token com getMe, sem enviar mensagem
 python -m radar_vagas --check-telegram
+
+# Aguarda uma mensagem no tópico e descobre o destino
+python -m radar_vagas --discover-telegram-topic
 
 # Envia uma mensagem fixa de teste, somente com confirmação explícita
 python -m radar_vagas --send-test --confirm-send-test
@@ -81,31 +85,33 @@ radar-vagas
 5. `SeenJobStore` registra fingerprints em `data/seen_jobs.json` para que uma
    vaga aceita não seja processada novamente entre execuções.
 6. `publishing/telegram.py` usa a API HTTP oficial do Telegram com a biblioteca
-   padrão do Python. `--check-telegram` chama apenas `getMe`; o envio só ocorre
-   com `--send-test --confirm-send-test`.
+   padrão do Python. `--check-telegram` chama apenas `getMe`; o modo de
+   descoberta usa somente `getUpdates`; o envio só ocorre com
+   `--send-test --confirm-send-test`.
 
 ## Variáveis de ambiente
 
 Copie `.env.example` apenas como referência. O código lê:
 
 - `RADAR_DATA_DIR`: diretório do arquivo local de deduplicação.
-- `TELEGRAM_BOT_TOKEN`: token do bot criado no BotFather.
-- `TELEGRAM_CHAT_ID`: identificador do grupo de destino.
-- `TELEGRAM_THREAD_ID`: identificador do tópico do grupo; pode ficar ausente
-  quando a mensagem deve ir para o tópico geral.
+- `TELEGRAM_BOT_TOKEN`: token do bot criado no BotFather. É o único Secret
+  necessário nesta etapa.
+- `TELEGRAM_CHAT_ID`: será descoberto pelo modo de configuração e cadastrado
+  posteriormente.
+- `TELEGRAM_THREAD_ID`: será descoberto pelo modo de configuração e cadastrado
+  posteriormente.
 - `RADAR_TIMEZONE`: fuso operacional, com padrão `America/Sao_Paulo`.
 - `RADAR_LOG_LEVEL`: nível de logs, com padrão `INFO`.
 
-### Onde cadastrar os três valores
+### Onde cadastrar o token nesta etapa
 
 No editor do Replit:
 
 1. Abra o painel **Tools**.
 2. Selecione **Secrets**.
 3. Clique em **+ New secret**.
-4. Cadastre exatamente estes nomes, um por vez, e seus respectivos valores:
-   `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` e `TELEGRAM_THREAD_ID`.
-5. Clique em **Add Secret** para cada item.
+4. Cadastre somente o nome `TELEGRAM_BOT_TOKEN` e o valor do token.
+5. Clique em **Add Secret**.
 
 Os Secrets são criptografados pelo Replit e ficam disponíveis ao programa como
 variáveis de ambiente. Eles não devem ser colocados no código, no
@@ -114,15 +120,37 @@ variáveis de ambiente. Eles não devem ser colocados no código, no
 
 Depois do cadastro, rode primeiro `python -m radar_vagas --check-telegram`.
 Esse comando confirma o bot com `getMe` e não publica nada. Quando quiser
-autorizar o envio da mensagem fixa de teste, use explicitamente:
+descobrir os IDs do grupo e do tópico, siga este fluxo:
+
+1. Adicione o bot ao grupo que contém o tópico **Vagas & Oportunidades**.
+2. Se o grupo usar o modo de privacidade do Telegram, desative-o no BotFather
+   com `/setprivacy` ou torne o bot administrador, para que ele receba a
+   mensagem comum enviada no tópico.
+3. Execute:
+
+```bash
+python -m radar_vagas --discover-telegram-topic
+```
+
+4. Sem fechar o comando, envie uma mensagem qualquer dentro do tópico
+   **Vagas & Oportunidades**.
+5. O programa exibirá `TELEGRAM_CHAT_ID` e `TELEGRAM_THREAD_ID`. Ele não grava
+   esses valores automaticamente e não envia nenhuma mensagem.
+
+Mensagens de fórum normalmente trazem o `message_thread_id`, mas não o nome do
+tópico em cada atualização. Por isso o modo descarta atualizações antigas e
+captura a próxima mensagem de tópico enquanto estiver aguardando. Se a API
+fornecer o nome de criação do tópico, ele também será conferido.
+
+Somente depois de cadastrar os IDs descobertos, e com autorização explícita,
+o envio da mensagem fixa de teste poderá ser feito com:
 
 ```bash
 python -m radar_vagas --send-test --confirm-send-test
 ```
 
-O comando faz uma verificação `getMe` antes e, em seguida, usa `sendMessage`
-com `TELEGRAM_CHAT_ID` e, quando preenchido, `TELEGRAM_THREAD_ID`. Ele nunca
-envia vagas reais nessa etapa.
+O comando faz uma verificação `getMe` antes e, em seguida, usa `sendMessage`.
+Ele nunca envia vagas reais nessa etapa.
 
 ## Próximos passos sugeridos
 

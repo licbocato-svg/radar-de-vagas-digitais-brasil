@@ -31,21 +31,12 @@ class Settings:
             log_level=os.getenv("RADAR_LOG_LEVEL", "INFO").upper(),
         )
 
-    def require_telegram(self) -> tuple[str, str, int | None]:
-        """Valida e converte a configuração necessária para o Telegram."""
+    def require_telegram(self) -> tuple[str, str | None, int | None]:
+        """Valida o token e converte destinos opcionais do Telegram."""
 
-        missing = [
-            name
-            for name, value in (
-                ("TELEGRAM_BOT_TOKEN", self.telegram_bot_token),
-                ("TELEGRAM_CHAT_ID", self.telegram_chat_id),
-            )
-            if not value
-        ]
-        if missing:
+        if not self.telegram_bot_token:
             raise RuntimeError(
-                "Telegram não configurado. Secret(s) ausente(s): "
-                + ", ".join(missing)
+                "Telegram não configurado. Secret ausente: TELEGRAM_BOT_TOKEN"
             )
 
         thread_id: int | None = None

@@ -61,3 +61,45 @@ class TelegramTests(unittest.TestCase):
         self.assertEqual(body["chat_id"], "-100123")
         self.assertEqual(body["message_thread_id"], 42)
         self.assertEqual(body["text"], "mensagem segura de teste")
+
+    def test_discovery_extracts_chat_and_thread_from_next_topic_message(self) -> None:
+        requests: list[Request] = []
+        responses = iter(
+            (
+                {"ok": True, "result": []},
+                {
+                    "ok": True,
+                    "result": [
+                        {
+                            "update_id": 10,
+                            "message": {
+                                "message_id": 11,
+                                "message_thread_id": 42,
+                                "is_topic_message": True,
+                                "chat": {"id": -100123, "type": "supergroup"},
+                                "text": "mensagem enviada no tópico",
+                            },
+                        }
+                    ],
+                },
+            )
+        )
+
+        def fake_urlopen(request: Request, *, timeout: float) -> FakeResponse:
+            requests.append(request)
+            return FakeResponse(next(responses))
+
+        client = TelegramBotClient(
+            TelegramConfig("test-token-not-a-secret"),
+            urlopen=fake_urlopen,
+        )
+        destination = asyncio.run(
+            client.discover_forum_topic(wait_seconds=5, poll_timeout_seconds=1)
+        )
+
+        self.assertIsNotNone(destination)
+        assert destination is not None
+        self.assertEqual(destination.chat_id, "-100123")
+        self.assertEqual(destination.message_thread_id, 42)
+        self.assertEqual(destination.topic_name, "Vagas & Oportunidades")
+        self.assertEqual(len(requests), 2)
