@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 
-from radar_vagas.collectors.empty import EmptyCollector
+from radar_vagas.collectors.lever import LeverCollector
 from radar_vagas.config import Settings
 from radar_vagas.core.pipeline import JobPipeline
 from radar_vagas.publishing.telegram import (
@@ -20,7 +20,15 @@ from radar_vagas.storage.seen_jobs import JsonSeenJobStore
 async def _run() -> int:
     settings = Settings.from_env()
     store = JsonSeenJobStore(settings.data_dir / "seen_jobs.json")
-    result = await JobPipeline((EmptyCollector(),), store).run()
+    result = await JobPipeline(
+    (LeverCollector(
+        (
+            "https://jobs.lever.co/scaleai",
+            "https://jobs.lever.co/labelbox",
+        )
+    ),),
+    store,
+).run()
     print("Radar de Vagas Digitais Brasil")
     print(f"Vagas coletadas: {result.collected_count}")
     print(f"Correspondências de cargo: {result.role_matches_count}")
