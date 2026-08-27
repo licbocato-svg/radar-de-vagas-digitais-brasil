@@ -1,0 +1,20 @@
+name: Testar Radar de Vagas
+
+on:
+  workflow_dispatch:
+
+jobs:
+  testar-radar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Executar radar de vagas
+        run: python -m radar_vagas
