@@ -19,4 +19,7 @@ jobs:
       - name: Executar radar de vagas
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        run: python -m radar_vagas --discover-telegram-topic --wait-seconds 30
+       - name: Executar radar de vagas
+  env:
+    TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  run: python -m radar_vagas --discover-telegram-topic --wait-seconds 30
