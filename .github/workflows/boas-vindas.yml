@@ -39,10 +39,14 @@ jobs:
 
       - name: Salvar controle de atualizacoes
         run: |
-          if [ -n "$(git status --porcelain data/welcome_last_update.json)" ]; then
+          if [ -f data/welcome_last_update.json ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
             git add data/welcome_last_update.json
-            git commit -m "Atualizar controle de boas-vindas"
-            git push
+
+            if ! git diff --cached --quiet; then
+              git commit -m "Atualizar controle de boas-vindas"
+              git push
+            fi
           fi
