@@ -33,7 +33,7 @@ async def _run() -> int:
     print(f"Vagas coletadas: {result.collected_count}")
     print(f"Correspondências de cargo: {result.role_matches_count}")
     print(f"Elegíveis para o Brasil: {result.brazil_eligible_count}")
-    print(f"Vagas novas: {len(result.unique_jobs)}")
+    print("Nenhuma plataforma externa está conectada nesta versão.")
     print("Nenhuma plataforma externa está conectada nesta versão.")
     return 0
 
