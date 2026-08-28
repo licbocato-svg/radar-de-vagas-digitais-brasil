@@ -14,9 +14,45 @@ from radar_vagas.publishing.telegram import (
     TelegramConfig,
 )
 
+
+# Tópico Geral
 GENERAL_THREAD_ID = 11
+
+# Arquivo usado para controlar quais atualizações já foram processadas
 STATE_FILE_NAME = "welcome_last_update.json"
 
+
+# ============================================================
+# BOTÕES DOS TÓPICOS
+# ============================================================
+
+TOPIC_BUTTONS = [
+    [
+        {
+            "text": "💬 Geral",
+            "url": "https://t.me/c/4314469021/11",
+        },
+        {
+            "text": "📢 Vagas e Oportunidades",
+            "url": "https://t.me/c/4314469021/8",
+        },
+    ],
+    [
+        {
+            "text": "📚 Materiais & Conteúdos",
+            "url": "https://t.me/c/4314469021/10",
+        },
+        {
+            "text": "📁 Arquivos do Canal",
+            "url": "https://t.me/c/4314469021/7",
+        },
+    ],
+]
+
+
+# ============================================================
+# PRIMEIRA MENSAGEM
+# ============================================================
 
 WELCOME = """👋 *BEM-VINDO(A) AO CLUBE HOME OFFICE!*
 
@@ -80,13 +116,40 @@ Participe, compartilhe suas experiências, ajude outros membros e aproveite a co
 """
 
 
-def _name_from_user(user: dict[str, Any]) -> str:
-    first = str(user.get("first_name") or "").strip()
-    last = str(user.get("last_name") or "").strip()
-    username = str(user.get("username") or "").strip()
+# ============================================================
+# SEGUNDA MENSAGEM — TÓPICOS
+# ============================================================
+
+TOPICS_MESSAGE = """🧭 *EXPLORE O CLUBE HOME OFFICE*
+
+Para encontrar rapidamente o que você procura, escolha um dos tópicos abaixo:
+
+👇 *Clique no tópico que deseja acessar:*"""
+
+
+# ============================================================
+# NOME DO MEMBRO
+# ============================================================
+
+def _name_from_user(
+    user: dict[str, Any],
+) -> str:
+
+    first = str(
+        user.get("first_name") or ""
+    ).strip()
+
+    last = str(
+        user.get("last_name") or ""
+    ).strip()
+
+    username = str(
+        user.get("username") or ""
+    ).strip()
 
     name = " ".join(
-        part for part in (first, last)
+        part
+        for part in (first, last)
         if part
     )
 
@@ -99,18 +162,33 @@ def _name_from_user(user: dict[str, Any]) -> str:
     return "novo membro"
 
 
-def _load_last_update(path: Path) -> int | None:
+# ============================================================
+# CONTROLE DE ATUALIZAÇÕES
+# ============================================================
+
+def _load_last_update(
+    path: Path,
+) -> int | None:
+
     if not path.exists():
         return None
 
     try:
+
         data = json.loads(
-            path.read_text(encoding="utf-8")
+            path.read_text(
+                encoding="utf-8"
+            )
         )
 
-        value = data.get("last_update_id")
+        value = data.get(
+            "last_update_id"
+        )
 
-        if isinstance(value, int):
+        if isinstance(
+            value,
+            int,
+        ):
             return value
 
     except (
@@ -132,7 +210,9 @@ def _save_last_update(
         exist_ok=True,
     )
 
-    temporary = path.with_suffix(".tmp")
+    temporary = path.with_suffix(
+        ".tmp"
+    )
 
     temporary.write_text(
         json.dumps(
@@ -147,6 +227,113 @@ def _save_last_update(
     temporary.replace(path)
 
 
+# ============================================================
+# DETECTAR ENTRADA DE MEMBRO
+# ============================================================
+
+def _member_from_chat_member_update(
+    update: dict[str, Any],
+) -> dict[str, Any] | None:
+
+    event = update.get(
+        "chat_member"
+    )
+
+    if not isinstance(
+        event,
+        dict,
+    ):
+        return None
+
+    chat = event.get(
+        "chat"
+    )
+
+    if not isinstance(
+        chat,
+        dict,
+    ):
+        return None
+
+    chat_id = chat.get(
+        "id"
+    )
+
+    # Nosso grupo
+    if str(chat_id) != "-1004314469021":
+        return None
+
+    new_chat_member = event.get(
+        "new_chat_member"
+    )
+
+    if not isinstance(
+        new_chat_member,
+        dict,
+    ):
+        return None
+
+    old_chat_member = event.get(
+        "old_chat_member"
+    )
+
+    if not isinstance(
+        old_chat_member,
+        dict,
+    ):
+        old_chat_member = {}
+
+    user = new_chat_member.get(
+        "user"
+    )
+
+    if not isinstance(
+        user,
+        dict,
+    ):
+        return None
+
+    old_status = str(
+        old_chat_member.get(
+            "status",
+            "",
+        )
+    )
+
+    new_status = str(
+        new_chat_member.get(
+            "status",
+            "",
+        )
+    )
+
+    # A pessoa precisa ter vindo de fora
+    # e agora estar dentro do grupo.
+    if old_status not in {
+        "left",
+        "kicked",
+    }:
+        return None
+
+    if new_status not in {
+        "member",
+        "restricted",
+    }:
+        return None
+
+    # Não dar boas-vindas a bots.
+    if user.get(
+        "is_bot"
+    ):
+        return None
+
+    return user
+
+
+# ============================================================
+# EXECUÇÃO PRINCIPAL
+# ============================================================
+
 async def run() -> int:
 
     settings = Settings.from_env()
@@ -155,13 +342,17 @@ async def run() -> int:
         settings
     )
 
+    # O workflow deve passar o tópico Geral.
     if config.thread_id != GENERAL_THREAD_ID:
+
         raise RuntimeError(
-            "O TELEGRAM_THREAD_ID configurado "
-            f"deve ser {GENERAL_THREAD_ID} para o tópico General."
+            "TELEGRAM_THREAD_ID deve ser 11 "
+            "para o tópico General."
         )
 
-    client = TelegramBotClient(config)
+    client = TelegramBotClient(
+        config
+    )
 
     await client.get_me()
 
@@ -174,6 +365,10 @@ async def run() -> int:
         state_path
     )
 
+    # --------------------------------------------------------
+    # PRIMEIRA EXECUÇÃO
+    # --------------------------------------------------------
+
     offset = (
         last_update_id + 1
         if last_update_id is not None
@@ -185,44 +380,50 @@ async def run() -> int:
         poll_timeout_seconds=0,
     )
 
-    # Primeira execução:
-    # apenas registra as atualizações existentes.
-    # Assim o robô não envia boas-vindas para
-    # pessoas que já estavam no grupo.
+    # Na primeira execução não enviamos
+    # mensagens para eventos antigos.
     if last_update_id is None:
 
-        highest_update_id = None
-
-        for update in updates:
-
-            update_id = update.get(
-                "update_id"
-            )
-
-            if isinstance(update_id, int):
-
-                if (
-                    highest_update_id is None
-                    or update_id > highest_update_id
-                ):
-                    highest_update_id = update_id
+        highest_update_id = max(
+            (
+                update.get(
+                    "update_id"
+                )
+                for update in updates
+                if isinstance(
+                    update.get(
+                        "update_id"
+                    ),
+                    int,
+                )
+            ),
+            default=None,
+        )
 
         if highest_update_id is not None:
+
             _save_last_update(
                 state_path,
                 highest_update_id,
             )
 
         print(
-            "Primeira execução concluída. "
-            "As atualizações existentes foram registradas."
+            "Primeira execução concluída."
         )
 
         print(
-            "O robô está pronto para novos membros."
+            "Atualizações existentes registradas."
+        )
+
+        print(
+            "Robô pronto para novos membros."
         )
 
         return 0
+
+    # --------------------------------------------------------
+    # NENHUMA ATUALIZAÇÃO
+    # --------------------------------------------------------
 
     if not updates:
 
@@ -232,7 +433,13 @@ async def run() -> int:
 
         return 0
 
-    highest_update_id = last_update_id
+    highest_update_id = (
+        last_update_id
+    )
+
+    # --------------------------------------------------------
+    # PROCESSAR ATUALIZAÇÕES
+    # --------------------------------------------------------
 
     for update in updates:
 
@@ -240,63 +447,59 @@ async def run() -> int:
             "update_id"
         )
 
-        if isinstance(update_id, int):
+        if isinstance(
+            update_id,
+            int,
+        ):
 
             highest_update_id = max(
                 highest_update_id,
                 update_id,
             )
 
-        message = update.get(
-            "message"
-        )
-
-        if not isinstance(message, dict):
-            continue
-
-        members = message.get(
-            "new_chat_members"
-        )
-
-        if not isinstance(members, list):
-            continue
-
-        if not members:
-            continue
-
-        thread_id = message.get(
-            "message_thread_id"
-        )
-
-        if thread_id != GENERAL_THREAD_ID:
-            continue
-
-        for member in members:
-
-            if not isinstance(
-                member,
-                dict,
-            ):
-                continue
-
-            if member.get("is_bot"):
-                continue
-
-            name = _name_from_user(
-                member
+        member = (
+            _member_from_chat_member_update(
+                update
             )
+        )
 
-            welcome_message = WELCOME.format(
+        if member is None:
+            continue
+
+        name = _name_from_user(
+            member
+        )
+
+        # ----------------------------------------------------
+        # PRIMEIRA MENSAGEM
+        # ----------------------------------------------------
+
+        welcome_message = (
+            WELCOME.format(
                 name=name
             )
+        )
 
-            await client.send_message(
-                welcome_message
-            )
+        await client.send_message(
+            welcome_message
+        )
 
-            print(
-                f"Boas-vindas enviadas para: {name}"
-            )
+        # ----------------------------------------------------
+        # SEGUNDA MENSAGEM COM BOTÕES
+        # ----------------------------------------------------
+
+        await client.send_message_with_buttons(
+            TOPICS_MESSAGE,
+            TOPIC_BUTTONS,
+        )
+
+        print(
+            f"Boas-vindas enviadas para: {name}"
+        )
+
+    # --------------------------------------------------------
+    # SALVAR ÚLTIMA ATUALIZAÇÃO
+    # --------------------------------------------------------
 
     _save_last_update(
         state_path,
@@ -310,12 +513,18 @@ async def run() -> int:
     return 0
 
 
+# ============================================================
+# INICIALIZAÇÃO
+# ============================================================
+
 if __name__ == "__main__":
 
     try:
 
         raise SystemExit(
-            asyncio.run(run())
+            asyncio.run(
+                run()
+            )
         )
 
     except (
