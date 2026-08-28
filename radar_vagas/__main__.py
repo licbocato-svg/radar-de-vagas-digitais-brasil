@@ -23,8 +23,8 @@ async def _run() -> int:
     result = await JobPipeline(
     (LeverCollector(
         (
-            "https://jobs.lever.co/scaleai",
-            "https://jobs.lever.co/labelbox",
+            "scaleai",
+            "labelbox",
         )
     ),),
     store,
