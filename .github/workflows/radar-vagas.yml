@@ -17,8 +17,8 @@ jobs:
           python-version: "3.12"
 
       - name: Executar radar de vagas
-  env:
-    TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-    TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-    TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
-  run: python -m radar_vagas --send-test --content "Teste de envio do Radar de Vagas"
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
+        run: python -m radar_vagas --send-test --confirm-send-test
