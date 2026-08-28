@@ -23,8 +23,8 @@ async def _run() -> int:
     result = await JobPipeline(
     (LeverCollector(
         (
-            "scaleai",
-            "labelbox",
+            "tryjeeves",
+           "weloglobal",
         )
     ),),
     store,
