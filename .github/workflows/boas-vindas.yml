@@ -4,7 +4,7 @@
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-            git add data/welcome_last_update.json
+            git add -f data/welcome_last_update.json
 
             if ! git diff --cached --quiet; then
               git commit -m "Atualizar controle de boas-vindas"
