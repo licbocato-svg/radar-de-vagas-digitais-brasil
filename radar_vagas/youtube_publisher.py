@@ -14,18 +14,23 @@ from radar_vagas.publishing.telegram import (
     TelegramConfig,
 )
 
+
 CHANNEL_ID = "UCjONYEd_8UOGLLBqGgwnfLA"
+
 
 FEED_URL = (
     "https://www.youtube.com/feeds/videos.xml?channel_id="
     + CHANNEL_ID
 )
 
+
 STATE_FILE_NAME = "youtube_last_published.json"
+
 
 ATOM_NAMESPACE = {
     "atom": "http://www.w3.org/2005/Atom"
 }
+
 
 YT_NAMESPACE = {
     "yt": "http://www.youtube.com/xml/schemas/2015"
@@ -33,6 +38,7 @@ YT_NAMESPACE = {
 
 
 def _fetch_feed() -> bytes:
+
     request = urllib.request.Request(
         FEED_URL,
         headers={
@@ -44,6 +50,7 @@ def _fetch_feed() -> bytes:
         request,
         timeout=30,
     ) as response:
+
         return response.read()
 
 
@@ -51,7 +58,9 @@ def _latest_video(
     feed: bytes,
 ) -> tuple[str, str, str] | None:
 
-    root = ET.fromstring(feed)
+    root = ET.fromstring(
+        feed
+    )
 
     entry = root.find(
         "atom:entry",
@@ -80,7 +89,10 @@ def _latest_video(
     if not video_id or not title:
         return None
 
-    link = f"https://www.youtube.com/watch?v={video_id}"
+    link = (
+        "https://www.youtube.com/watch?v="
+        + video_id
+    )
 
     return title, link, video_id
 
@@ -93,6 +105,7 @@ def _load_last_id(
         return None
 
     try:
+
         data = json.loads(
             path.read_text(
                 encoding="utf-8"
@@ -105,7 +118,10 @@ def _load_last_id(
 
         return (
             value
-            if isinstance(value, str)
+            if isinstance(
+                value,
+                str,
+            )
             else None
         )
 
@@ -113,6 +129,7 @@ def _load_last_id(
         OSError,
         json.JSONDecodeError,
     ):
+
         return None
 
 
@@ -141,7 +158,9 @@ def _save_last_id(
         encoding="utf-8",
     )
 
-    temporary.replace(path)
+    temporary.replace(
+        path
+    )
 
 
 async def publish_new_youtube_video() -> int:
@@ -154,6 +173,7 @@ async def publish_new_youtube_video() -> int:
     )
 
     try:
+
         entry = _latest_video(
             _fetch_feed()
         )
@@ -198,10 +218,20 @@ async def publish_new_youtube_video() -> int:
         "no YouTube que pode te ajudar "
         "no seu caminho no home office:\n\n"
         f"*{title}*\n\n"
-        f"👉 Assista aqui:\n{link}"
+        "👇 *ACESSE O VÍDEO:*"
     )
 
+    buttons = [
+        [
+            {
+                "text": "▶️ ASSISTIR AO VÍDEO",
+                "url": link,
+            }
+        ]
+    ]
+
     try:
+
         config = TelegramConfig.from_settings(
             settings
         )
@@ -225,12 +255,14 @@ async def publish_new_youtube_video() -> int:
 
         await client.get_me()
 
-        await client.send_message(
-            message
+        await client.send_message_with_buttons(
+            message,
+            buttons,
         )
 
         print(
-            "Mensagem enviada para a API do Telegram."
+            "Mensagem com botão enviada "
+            "para a API do Telegram."
         )
 
     except (
@@ -252,6 +284,10 @@ async def publish_new_youtube_video() -> int:
 
     print(
         f"Vídeo publicado no Telegram: {title}"
+    )
+
+    print(
+        "Botão do YouTube enviado com sucesso."
     )
 
     return 0
