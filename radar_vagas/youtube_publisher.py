@@ -202,16 +202,35 @@ async def publish_new_youtube_video() -> int:
     )
 
     try:
+        config = TelegramConfig.from_settings(
+            settings
+        )
+
+        print(
+            f"CHAT DESTINO: {config.chat_id}"
+        )
+
+        print(
+            f"THREAD DESTINO: "
+            f"{config.message_thread_id}"
+        )
+
+        print(
+            f"VÍDEO ENCONTRADO: {title}"
+        )
+
         client = TelegramBotClient(
-            TelegramConfig.from_settings(
-                settings
-            )
+            config
         )
 
         await client.get_me()
 
         await client.send_message(
             message
+        )
+
+        print(
+            "Mensagem enviada para a API do Telegram."
         )
 
     except (
