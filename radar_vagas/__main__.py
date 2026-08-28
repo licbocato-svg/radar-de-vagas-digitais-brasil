@@ -46,7 +46,7 @@ https://lp.quebreiodespertador.com/formula-hol""",
 A Fórmula HOL reúne conhecimentos e estratégias para quem quer buscar oportunidades e desenvolver sua trajetória no home office.
 
 🔗 Conheça o treinamento:
-https://pay.kiwify.com.br/9ukPfJ9""",
+https://lp.quebreiodespertador.com/formula-hol""",
     ],
     "avaliador-mapas": [
         """🗺️ Você tem curiosidade sobre o trabalho de Avaliador de Mapas?
