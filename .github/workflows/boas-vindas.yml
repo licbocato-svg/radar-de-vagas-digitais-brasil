@@ -1,6 +1,51 @@
+name: Boas-vindas Clube Home Office
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+
+  workflow_dispatch:
+
+  push:
+    paths-ignore:
+      - "data/welcome_last_update.json"
+
+concurrency:
+  group: boas-vindas-clube-home-office
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  boas-vindas:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verificar novos membros
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_GENERAL_THREAD_ID }}
+
+        run: |
+          python -m radar_vagas.welcome_member
+
       - name: Salvar controle de atualizacoes
         run: |
           if [ -f data/welcome_last_update.json ]; then
+
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -10,4 +55,5 @@
               git commit -m "Atualizar controle de boas-vindas"
               git push
             fi
+
           fi
