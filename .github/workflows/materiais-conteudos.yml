@@ -2,17 +2,23 @@ name: Materiais e Conteúdos Automático
 
 on:
   schedule:
+    # 09:00 horário de Brasília
     - cron: "0 12 * * *"
+
+    # 13:00 horário de Brasília
     - cron: "0 16 * * *"
+
+    # 17:00 horário de Brasília
     - cron: "0 20 * * *"
+
+    # 20:00 horário de Brasília
     - cron: "0 23 * * *"
 
   workflow_dispatch:
     inputs:
       produto:
-        description: "Escolha o produto para testar"
+        description: "Escolha o produto para publicar no teste"
         required: true
-        default: "home-office"
         type: choice
         options:
           - home-office
@@ -38,24 +44,41 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_MATERIAIS_THREAD_ID }}
+
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            python -m radar_vagas --send-material "${{ inputs.produto }}" --variation 0
+            python -m radar_vagas \
+              --send-material "${{ inputs.produto }}" \
+              --variation $(( $(date +%s) / 86400 % 2 ))
 
           else
             HOUR=$(date -u +%H)
 
+            echo "Horário UTC da execução: $HOUR"
+
             if [ "$HOUR" = "12" ]; then
-              python -m radar_vagas --send-material home-office --variation $(( $(date +%s) / 86400 % 2 ))
+              echo "Publicando: Guia Home Office Internacional"
+              python -m radar_vagas \
+                --send-material home-office \
+                --variation $(( $(date +%s) / 86400 % 2 ))
 
             elif [ "$HOUR" = "16" ]; then
-              python -m radar_vagas --send-material formula-hol --variation $(( $(date +%s) / 86400 % 2 ))
+              echo "Publicando: Fórmula HOL"
+              python -m radar_vagas \
+                --send-material formula-hol \
+                --variation $(( $(date +%s) / 86400 % 2 ))
 
             elif [ "$HOUR" = "20" ]; then
-              python -m radar_vagas --send-material avaliador-mapas --variation $(( $(date +%s) / 86400 % 2 ))
+              echo "Publicando: Guia Avaliador de Mapas"
+              python -m radar_vagas \
+                --send-material avaliador-mapas \
+                --variation $(( $(date +%s) / 86400 % 2 ))
 
             elif [ "$HOUR" = "23" ]; then
-              python -m radar_vagas --send-material avaliador-digital --variation $(( $(date +%s) / 86400 % 2 ))
+              echo "Publicando: Guia Avaliador Digital"
+              python -m radar_vagas \
+                --send-material avaliador-digital \
+                --variation $(( $(date +%s) / 86400 % 2 ))
 
             else
               echo "Horário sem publicação configurada."
