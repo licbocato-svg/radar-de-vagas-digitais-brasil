@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -15,11 +14,11 @@ from radar_vagas.publishing.telegram import (
     TelegramConfig,
 )
 
-CHANNEL_HANDLE = "liviabocato"
+CHANNEL_ID = "UCjONYEd_8UOGLLBqGgwnfLA"
 
 FEED_URL = (
-    "https://www.youtube.com/feeds/videos.xml?forHandle="
-    + urllib.parse.quote(CHANNEL_HANDLE)
+    "https://www.youtube.com/feeds/videos.xml?channel_id="
+    + CHANNEL_ID
 )
 
 STATE_FILE_NAME = "youtube_last_published.json"
@@ -81,9 +80,7 @@ def _latest_video(
     if not video_id or not title:
         return None
 
-    link = (
-        f"https://www.youtube.com/watch?v={video_id}"
-    )
+    link = f"https://www.youtube.com/watch?v={video_id}"
 
     return title, link, video_id
 
