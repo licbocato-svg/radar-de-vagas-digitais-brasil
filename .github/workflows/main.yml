@@ -1,0 +1,26 @@
+name: Descobrir Topico Geral
+
+on:
+  workflow_dispatch:
+
+jobs:
+  descobrir:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Descobrir tópico Geral
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          python -m radar_vagas \
+            --discover-telegram-topic \
+            --topic-name "General" \
+            --wait-seconds 120
