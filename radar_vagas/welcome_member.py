@@ -15,10 +15,7 @@ from radar_vagas.publishing.telegram import (
 )
 
 
-# Tópico Geral
 GENERAL_THREAD_ID = 11
-
-# Arquivo usado para controlar quais atualizações já foram processadas
 STATE_FILE_NAME = "welcome_last_update.json"
 
 
@@ -51,10 +48,10 @@ TOPIC_BUTTONS = [
 
 
 # ============================================================
-# PRIMEIRA MENSAGEM
+# MENSAGEM DE BOAS-VINDAS
 # ============================================================
 
-WELCOME = """👋 *BEM-VINDO(A) AO CLUBE HOME OFFICE!*
+WELCOME = """*👋 BEM-VINDO(A) AO CLUBE HOME OFFICE!*
 
 Olá, {name}! Seja muito bem-vindo(a)! 💙
 
@@ -86,23 +83,33 @@ Não compartilhe conteúdo ofensivo, pornográfico, discriminatório ou excessiv
 
 *4. SEM POLÍTICA, RELIGIÃO OU FUTEBOL*
 
-Para manter o foco e evitar divisões, não serão permitidos debates sobre política, religião ou futebol. Nosso objetivo é preservar um ambiente *neutro, produtivo e acolhedor*.
+Para manter o foco e evitar divisões, não serão permitidos debates sobre política, religião ou futebol.
+
+Nosso objetivo é preservar um ambiente *neutro, produtivo e acolhedor.*
 
 *5. SEM DIVULGAÇÃO EXTERNA*
 
-Não é permitida a divulgação de mentorias, cursos, grupos, consultorias ou produtos que não sejam da comunidade. A divulgação externa será tratada com rigor.
+Não é permitida a divulgação de mentorias, cursos, grupos, consultorias ou produtos que não sejam da comunidade.
+
+A divulgação externa será tratada com rigor.
 
 *6. NADA DE VENDAS PESSOAIS*
 
-Este grupo não é espaço para oferecer produtos ou serviços próprios. O foco é *apoio, aprendizado e networking*.
+Este grupo não é espaço para oferecer produtos ou serviços próprios.
+
+O foco é *apoio, aprendizado e networking.*
 
 *7. PERGUNTAS APENAS POR ESCRITO*
 
-Evite enviar áudios. Escreva sua dúvida para que todos possam acompanhar, participar e contribuir com a resposta.
+Evite enviar áudios.
+
+Escreva sua dúvida para que todos possam acompanhar, participar e contribuir com a resposta.
 
 *8. PROIBIDO CHAMAR NO PRIVADO*
 
-O grupo não é uma mentoria individual. É proibido chamar administradores ou membros no privado para solicitar atendimento, suporte ou orientação individual.
+O grupo não é uma mentoria individual.
+
+É proibido chamar administradores ou membros no privado para solicitar atendimento, suporte ou orientação individual.
 
 🚨 *BANIMENTO PERMANENTE*
 
@@ -112,19 +119,18 @@ O grupo não é uma mentoria individual. É proibido chamar administradores ou m
 
 Participe, compartilhe suas experiências, ajude outros membros e aproveite a comunidade.
 
-*Estamos juntos nessa jornada! 🚀*
-"""
+*Estamos juntos nessa jornada! 🚀*"""
 
 
 # ============================================================
-# SEGUNDA MENSAGEM — TÓPICOS
+# MENSAGEM DOS TÓPICOS
 # ============================================================
 
 TOPICS_MESSAGE = """🧭 *EXPLORE O CLUBE HOME OFFICE*
 
-Para encontrar rapidamente o que você procura, escolha um dos tópicos abaixo:
+Encontre rapidamente o conteúdo que você procura e aproveite todos os espaços da nossa comunidade.
 
-👇 *Clique no tópico que deseja acessar:*"""
+👇 *CLIQUE NO TÓPICO QUE DESEJA ACESSAR:*"""
 
 
 # ============================================================
@@ -228,7 +234,7 @@ def _save_last_update(
 
 
 # ============================================================
-# DETECTAR ENTRADA DE MEMBRO
+# DETECTAR ENTRADA DO MEMBRO
 # ============================================================
 
 def _member_from_chat_member_update(
@@ -259,7 +265,6 @@ def _member_from_chat_member_update(
         "id"
     )
 
-    # Nosso grupo
     if str(chat_id) != "-1004314469021":
         return None
 
@@ -307,8 +312,7 @@ def _member_from_chat_member_update(
         )
     )
 
-    # A pessoa precisa ter vindo de fora
-    # e agora estar dentro do grupo.
+    # Entrada real no grupo.
     if old_status not in {
         "left",
         "kicked",
@@ -321,7 +325,7 @@ def _member_from_chat_member_update(
     }:
         return None
 
-    # Não dar boas-vindas a bots.
+    # Ignorar bots.
     if user.get(
         "is_bot"
     ):
@@ -342,7 +346,6 @@ async def run() -> int:
         settings
     )
 
-    # O workflow deve passar o tópico Geral.
     if config.thread_id != GENERAL_THREAD_ID:
 
         raise RuntimeError(
@@ -365,10 +368,6 @@ async def run() -> int:
         state_path
     )
 
-    # --------------------------------------------------------
-    # PRIMEIRA EXECUÇÃO
-    # --------------------------------------------------------
-
     offset = (
         last_update_id + 1
         if last_update_id is not None
@@ -380,8 +379,9 @@ async def run() -> int:
         poll_timeout_seconds=0,
     )
 
-    # Na primeira execução não enviamos
-    # mensagens para eventos antigos.
+    # Primeira execução:
+    # registra os eventos existentes sem enviar
+    # boas-vindas antigas.
     if last_update_id is None:
 
         highest_update_id = max(
@@ -421,10 +421,6 @@ async def run() -> int:
 
         return 0
 
-    # --------------------------------------------------------
-    # NENHUMA ATUALIZAÇÃO
-    # --------------------------------------------------------
-
     if not updates:
 
         print(
@@ -436,10 +432,6 @@ async def run() -> int:
     highest_update_id = (
         last_update_id
     )
-
-    # --------------------------------------------------------
-    # PROCESSAR ATUALIZAÇÕES
-    # --------------------------------------------------------
 
     for update in updates:
 
@@ -470,23 +462,19 @@ async def run() -> int:
             member
         )
 
-        # ----------------------------------------------------
+        # ====================================================
         # PRIMEIRA MENSAGEM
-        # ----------------------------------------------------
+        # ====================================================
 
-        welcome_message = (
+        await client.send_message(
             WELCOME.format(
                 name=name
             )
         )
 
-        await client.send_message(
-            welcome_message
-        )
-
-        # ----------------------------------------------------
+        # ====================================================
         # SEGUNDA MENSAGEM COM BOTÕES
-        # ----------------------------------------------------
+        # ====================================================
 
         await client.send_message_with_buttons(
             TOPICS_MESSAGE,
@@ -496,10 +484,6 @@ async def run() -> int:
         print(
             f"Boas-vindas enviadas para: {name}"
         )
-
-    # --------------------------------------------------------
-    # SALVAR ÚLTIMA ATUALIZAÇÃO
-    # --------------------------------------------------------
 
     _save_last_update(
         state_path,
