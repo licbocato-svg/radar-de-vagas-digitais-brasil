@@ -158,6 +158,11 @@ class TelegramBotClient:
         payload: dict[str, Any] = {
             "chat_id": self.config.chat_id,
             "text": text,
+
+            # Permite usar *texto* para negrito
+            # nas mensagens enviadas ao Telegram.
+            "parse_mode": "Markdown",
+
             "disable_web_page_preview": True,
         }
 
@@ -294,13 +299,18 @@ class TelegramBotClient:
             poll_timeout_seconds=0
         )
 
-        offset = _next_offset(pending)
+        offset = _next_offset(
+            pending
+        )
 
         loop = asyncio.get_running_loop()
 
         deadline = (
             loop.time()
-            + max(1, wait_seconds)
+            + max(
+                1,
+                wait_seconds,
+            )
         )
 
         while loop.time() < deadline:
@@ -381,16 +391,23 @@ def _destination_from_update(
     expected_topic_name: str,
 ) -> TopicDestination | None:
 
-    message = update.get("message")
+    message = update.get(
+        "message"
+    )
 
-    if not isinstance(message, dict):
+    if not isinstance(
+        message,
+        dict,
+    ):
         return None
 
     thread_id = message.get(
         "message_thread_id"
     )
 
-    chat = message.get("chat")
+    chat = message.get(
+        "chat"
+    )
 
     if not isinstance(
         thread_id,
@@ -404,7 +421,9 @@ def _destination_from_update(
     ):
         return None
 
-    chat_id = chat.get("id")
+    chat_id = chat.get(
+        "id"
+    )
 
     if not isinstance(
         chat_id,
@@ -477,9 +496,13 @@ def format_job_message(
         f"Fonte: {job.source}"
     )
 
-    lines.append(job.url)
+    lines.append(
+        job.url
+    )
 
-    return "\n".join(lines)
+    return "\n".join(
+        lines
+    )
 
 
 TEST_MESSAGE = (
