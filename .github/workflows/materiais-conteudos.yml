@@ -1,6 +1,14 @@
 name: Materiais e Conteúdos Automático
 
 on:
+  schedule:
+    # 09:00, 13:00, 17:00 e 20:00 no horário de Brasília
+    # O GitHub Actions usa UTC.
+    - cron: "0 12 * * *"
+    - cron: "0 16 * * *"
+    - cron: "0 20 * * *"
+    - cron: "0 23 * * *"
+
   workflow_dispatch:
 
 jobs:
@@ -11,9 +19,31 @@ jobs:
       - name: Baixar código
         uses: actions/checkout@v4
 
-      - name: Publicar Guia Home Office
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Publicar material
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_MATERIAIS_THREAD_ID }}
-        run: python -m radar_vagas --send-material home-office --variation 0
+        run: |
+          HOUR=$(date -u +%H)
+
+          if [ "$HOUR" = "12" ]; then
+            python -m radar_vagas --send-material home-office --variation $(( $(date +%s) / 86400 % 2 ))
+
+          elif [ "$HOUR" = "16" ]; then
+            python -m radar_vagas --send-material formula-hol --variation $(( $(date +%s) / 86400 % 2 ))
+
+          elif [ "$HOUR" = "20" ]; then
+            python -m radar_vagas --send-material avaliador-mapas --variation $(( $(date +%s) / 86400 % 2 ))
+
+          elif [ "$HOUR" = "23" ]; then
+            python -m radar_vagas --send-material avaliador-digital --variation $(( $(date +%s) / 86400 % 2 ))
+
+          else
+            echo "Horário sem publicação configurada."
+          fi
