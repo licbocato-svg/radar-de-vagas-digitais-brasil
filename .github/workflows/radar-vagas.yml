@@ -1,10 +1,12 @@
-name: Testar Radar de Vagas
+name: Radar de Vagas Automático
 
 on:
+  schedule:
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 jobs:
-  testar-radar:
+  executar-radar:
     runs-on: ubuntu-latest
 
     steps:
