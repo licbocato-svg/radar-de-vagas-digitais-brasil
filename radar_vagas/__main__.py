@@ -33,8 +33,23 @@ async def _run() -> int:
     print(f"Vagas coletadas: {result.collected_count}")
     print(f"Correspondências de cargo: {result.role_matches_count}")
     print(f"Elegíveis para o Brasil: {result.brazil_eligible_count}")
-    print("Nenhuma plataforma externa está conectada nesta versão.")
-    print("Nenhuma plataforma externa está conectada nesta versão.")
+    print(f"Vagas novas: {len(result.unique_jobs)}")
+    if not result.unique_jobs:
+    print("Nenhuma vaga nova para publicar no Telegram.")
+    return 0
+
+try:
+    client = TelegramBotClient(TelegramConfig.from_settings(settings))
+    await client.get_me()
+
+    for job in result.unique_jobs:
+        await client.publish(job)
+
+except (RuntimeError, TelegramApiError) as error:
+    print(f"Falha ao publicar vagas no Telegram: {error}")
+    return 1
+
+print(f"Vagas publicadas no Telegram: {len(result.unique_jobs)}")
     return 0
 
 
