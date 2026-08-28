@@ -1,10 +1,12 @@
-name: Descobrir Tópico Materiais e Conteúdos
+name: Radar de Vagas Automático
 
 on:
+  schedule:
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 jobs:
-  descobrir-topico:
+  executar-radar:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,8 +18,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Descobrir tópico Materiais e Conteúdos
+      - name: Executar radar de vagas
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python -m radar_vagas --discover-telegram-topic --topic-name "Materiais e Conteúdos" --wait-seconds 120
+          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
+        run: python -m radar_vagas
