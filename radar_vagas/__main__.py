@@ -39,7 +39,7 @@ https://pay.kiwify.com.br/NVpp2kM""",
 A Fórmula HOL é o treinamento para quem quer entender melhor as oportunidades de home office e construir uma nova possibilidade de renda trabalhando online.
 
 👉 Conheça a Fórmula HOL:
-https://lp.quebreiodespertador.com/formula-hol/""",
+https://lp.quebreiodespertador.com/formula-hol""",
 
         """💡 Muitas pessoas querem trabalhar de casa, mas não sabem quais caminhos seguir.
 
