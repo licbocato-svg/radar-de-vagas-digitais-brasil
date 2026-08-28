@@ -17,4 +17,4 @@ jobs:
           python-version: "3.12"
 
       - name: Executar radar de vagas
-       run: python -m radar_vagas --discover-telegram-topic --wait-seconds 30
+        run: python -m radar_vagas --discover-telegram-topic --wait-seconds 30
