@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Baixar código
         uses: actions/checkout@v4
 
@@ -39,48 +40,61 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Publicar material
+      - name: Publicar produto
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_MATERIAIS_THREAD_ID }}
 
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            python -m radar_vagas \
-              --send-material "${{ inputs.produto }}" \
+
+            echo "Publicando produto selecionado: ${{ inputs.produto }}"
+
+            python -m radar_vagas.produtos_publisher \
+              "${{ inputs.produto }}" \
               --variation $(( $(date +%s) / 86400 % 2 ))
 
           else
+
             HOUR=$(date -u +%H)
 
             echo "Horário UTC da execução: $HOUR"
 
             if [ "$HOUR" = "12" ]; then
+
               echo "Publicando: Guia Home Office Internacional"
-              python -m radar_vagas \
-                --send-material home-office \
+
+              python -m radar_vagas.produtos_publisher \
+                home-office \
                 --variation $(( $(date +%s) / 86400 % 2 ))
 
             elif [ "$HOUR" = "16" ]; then
+
               echo "Publicando: Fórmula HOL"
-              python -m radar_vagas \
-                --send-material formula-hol \
+
+              python -m radar_vagas.produtos_publisher \
+                formula-hol \
                 --variation $(( $(date +%s) / 86400 % 2 ))
 
             elif [ "$HOUR" = "20" ]; then
+
               echo "Publicando: Guia Avaliador de Mapas"
-              python -m radar_vagas \
-                --send-material avaliador-mapas \
+
+              python -m radar_vagas.produtos_publisher \
+                avaliador-mapas \
                 --variation $(( $(date +%s) / 86400 % 2 ))
 
             elif [ "$HOUR" = "23" ]; then
+
               echo "Publicando: Guia Avaliador Digital"
-              python -m radar_vagas \
-                --send-material avaliador-digital \
+
+              python -m radar_vagas.produtos_publisher \
+                avaliador-digital \
                 --variation $(( $(date +%s) / 86400 % 2 ))
 
             else
+
               echo "Horário sem publicação configurada."
+
             fi
+
           fi
