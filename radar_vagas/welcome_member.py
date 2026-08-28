@@ -1,8 +1,10 @@
-"""Dá boas-vindas a novos membros no tópico Geral do Telegram."""
+"""Robô de boas-vindas para novos membros do Clube Home Office."""
 
 from __future__ import annotations
 
 import asyncio
+import json
+from pathlib import Path
 from typing import Any
 
 from radar_vagas.config import Settings
@@ -11,6 +13,9 @@ from radar_vagas.publishing.telegram import (
     TelegramBotClient,
     TelegramConfig,
 )
+
+GENERAL_THREAD_ID = 11
+STATE_FILE_NAME = "welcome_last_update.json"
 
 
 WELCOME = """👋 *BEM-VINDO(A) AO CLUBE HOME OFFICE!*
@@ -81,7 +86,8 @@ def _name_from_user(user: dict[str, Any]) -> str:
     username = str(user.get("username") or "").strip()
 
     name = " ".join(
-        part for part in (first, last) if part
+        part for part in (first, last)
+        if part
     )
 
     if name:
@@ -93,29 +99,157 @@ def _name_from_user(user: dict[str, Any]) -> str:
     return "novo membro"
 
 
+def _load_last_update(path: Path) -> int | None:
+    if not path.exists():
+        return None
+
+    try:
+        data = json.loads(
+            path.read_text(encoding="utf-8")
+        )
+
+        value = data.get("last_update_id")
+
+        if isinstance(value, int):
+            return value
+
+    except (
+        OSError,
+        json.JSONDecodeError,
+    ):
+        pass
+
+    return None
+
+
+def _save_last_update(
+    path: Path,
+    update_id: int,
+) -> None:
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    temporary = path.with_suffix(".tmp")
+
+    temporary.write_text(
+        json.dumps(
+            {
+                "last_update_id": update_id
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    temporary.replace(path)
+
+
 async def run() -> int:
+
     settings = Settings.from_env()
 
     config = TelegramConfig.from_settings(
         settings
     )
 
-    if config.thread_id is None:
+    if config.thread_id != GENERAL_THREAD_ID:
         raise RuntimeError(
-            "TELEGRAM_THREAD_ID não está configurado."
+            "O TELEGRAM_THREAD_ID configurado "
+            f"deve ser {GENERAL_THREAD_ID} para o tópico General."
         )
 
     client = TelegramBotClient(config)
 
     await client.get_me()
 
-    updates = await client.get_updates(
-        poll_timeout_seconds=0
+    state_path = (
+        settings.data_dir
+        / STATE_FILE_NAME
     )
+
+    last_update_id = _load_last_update(
+        state_path
+    )
+
+    offset = (
+        last_update_id + 1
+        if last_update_id is not None
+        else None
+    )
+
+    updates = await client.get_updates(
+        offset=offset,
+        poll_timeout_seconds=0,
+    )
+
+    # Primeira execução:
+    # apenas registra as atualizações existentes.
+    # Assim o robô não envia boas-vindas para
+    # pessoas que já estavam no grupo.
+    if last_update_id is None:
+
+        highest_update_id = None
+
+        for update in updates:
+
+            update_id = update.get(
+                "update_id"
+            )
+
+            if isinstance(update_id, int):
+
+                if (
+                    highest_update_id is None
+                    or update_id > highest_update_id
+                ):
+                    highest_update_id = update_id
+
+        if highest_update_id is not None:
+            _save_last_update(
+                state_path,
+                highest_update_id,
+            )
+
+        print(
+            "Primeira execução concluída. "
+            "As atualizações existentes foram registradas."
+        )
+
+        print(
+            "O robô está pronto para novos membros."
+        )
+
+        return 0
+
+    if not updates:
+
+        print(
+            "Nenhum novo membro encontrado."
+        )
+
+        return 0
+
+    highest_update_id = last_update_id
 
     for update in updates:
 
-        message = update.get("message")
+        update_id = update.get(
+            "update_id"
+        )
+
+        if isinstance(update_id, int):
+
+            highest_update_id = max(
+                highest_update_id,
+                update_id,
+            )
+
+        message = update.get(
+            "message"
+        )
 
         if not isinstance(message, dict):
             continue
@@ -134,18 +268,23 @@ async def run() -> int:
             "message_thread_id"
         )
 
-        if thread_id != config.thread_id:
+        if thread_id != GENERAL_THREAD_ID:
             continue
 
         for member in members:
 
-            if not isinstance(member, dict):
+            if not isinstance(
+                member,
+                dict,
+            ):
                 continue
 
             if member.get("is_bot"):
                 continue
 
-            name = _name_from_user(member)
+            name = _name_from_user(
+                member
+            )
 
             welcome_message = WELCOME.format(
                 name=name
@@ -159,6 +298,11 @@ async def run() -> int:
                 f"Boas-vindas enviadas para: {name}"
             )
 
+    _save_last_update(
+        state_path,
+        highest_update_id,
+    )
+
     print(
         "Verificação de novos membros concluída."
     )
@@ -169,6 +313,7 @@ async def run() -> int:
 if __name__ == "__main__":
 
     try:
+
         raise SystemExit(
             asyncio.run(run())
         )
