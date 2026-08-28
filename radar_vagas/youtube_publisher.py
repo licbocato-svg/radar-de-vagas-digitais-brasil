@@ -207,16 +207,16 @@ async def publish_new_youtube_video() -> int:
         )
 
         print(
-            f"CHAT DESTINO: {config.chat_id}"
-        )
-
-        print(
-            f"THREAD DESTINO: "
-            f"{config.message_thread_id}"
+            f"CHAT DESTINO CONFIGURADO: "
+            f"{config.chat_id}"
         )
 
         print(
             f"VÍDEO ENCONTRADO: {title}"
+        )
+
+        print(
+            f"LINK DO VÍDEO: {link}"
         )
 
         client = TelegramBotClient(
