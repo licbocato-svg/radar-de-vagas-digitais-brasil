@@ -12,19 +12,11 @@ from radar_vagas.publishing.telegram import (
 )
 
 
-# ============================================================
-# CONFIGURAÇÃO
-# ============================================================
-
 CHAT_ID = "-1004314469021"
 
 # Tópico Materiais & Conteúdos
 THREAD_ID = 10
 
-
-# ============================================================
-# BOTÕES DOS TÓPICOS
-# ============================================================
 
 TOPIC_BUTTONS = [
     [
@@ -47,12 +39,14 @@ TOPIC_BUTTONS = [
             "url": "https://t.me/c/4314469021/7",
         },
     ],
+    [
+        {
+            "text": "🤝 Network Home Lovers",
+            "url": "https://t.me/c/4314469021/133",
+        },
+    ],
 ]
 
-
-# ============================================================
-# MENSAGEM
-# ============================================================
 
 NAVIGATION_MESSAGE = """🧭 *EXPLORE O CLUBE HOME OFFICE*
 
@@ -60,10 +54,6 @@ Encontre rapidamente o conteúdo que você procura e aproveite todos os espaços
 
 👇 *CLIQUE NO TÓPICO QUE DESEJA ACESSAR:*"""
 
-
-# ============================================================
-# EXECUÇÃO
-# ============================================================
 
 async def publish_navigation() -> int:
 
@@ -108,10 +98,6 @@ async def publish_navigation() -> int:
 
     return 0
 
-
-# ============================================================
-# INICIALIZAÇÃO
-# ============================================================
 
 if __name__ == "__main__":
 
