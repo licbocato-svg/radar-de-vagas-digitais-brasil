@@ -1,0 +1,76 @@
+name: Network Home Lovers
+
+on:
+  schedule:
+    # 10:00 horário de Brasília
+    - cron: "0 13 * * *"
+
+    # 19:00 horário de Brasília
+    - cron: "0 22 * * *"
+
+  workflow_dispatch:
+    inputs:
+      variation:
+        description: "Variação da mensagem"
+        required: true
+        type: choice
+        options:
+          - "0"
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+
+jobs:
+  publicar-network:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Publicar mensagem
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+
+            echo "Publicando variação manual: ${{ inputs.variation }}"
+
+            python -m radar_vagas.network_home_lovers \
+              --variation "${{ inputs.variation }}"
+
+          else
+
+            HOUR=$(date -u +%H)
+
+            echo "Horário UTC da execução: $HOUR"
+
+            if [ "$HOUR" = "13" ]; then
+
+              echo "Publicando mensagem do período da manhã."
+
+              python -m radar_vagas.network_home_lovers \
+                --variation $(( $(date +%s) / 86400 % 5 ))
+
+            elif [ "$HOUR" = "22" ]; then
+
+              echo "Publicando mensagem do período da noite."
+
+              python -m radar_vagas.network_home_lovers \
+                --variation $(( ($(date +%s) / 86400 + 2) % 5 ))
+
+            else
+
+              echo "Horário sem publicação configurada."
+
+            fi
+
+          fi
