@@ -28,6 +28,7 @@ class TelegramConfig:
         settings: Settings,
     ) -> "TelegramConfig":
         token, chat_id, thread_id = settings.require_telegram()
+
         return cls(
             bot_token=token,
             chat_id=chat_id,
@@ -127,16 +128,21 @@ class TelegramBotClient:
     async def send_message(
         self,
         text: str,
+        *,
+        parse_mode: str | None = None,
     ) -> Mapping[str, Any]:
 
         return await self._send_message(
             text=text,
+            parse_mode=parse_mode,
         )
 
     async def send_message_with_buttons(
         self,
         text: str,
         buttons: list[list[dict[str, str]]],
+        *,
+        parse_mode: str | None = None,
     ) -> Mapping[str, Any]:
 
         return await self._send_message(
@@ -144,6 +150,7 @@ class TelegramBotClient:
             reply_markup={
                 "inline_keyboard": buttons,
             },
+            parse_mode=parse_mode,
         )
 
     async def _send_message(
@@ -151,6 +158,7 @@ class TelegramBotClient:
         *,
         text: str,
         reply_markup: dict[str, Any] | None = None,
+        parse_mode: str | None = None,
     ) -> Mapping[str, Any]:
 
         if not self.config.chat_id:
@@ -162,8 +170,10 @@ class TelegramBotClient:
             "chat_id": self.config.chat_id,
             "text": text,
             "disable_web_page_preview": True,
-            "parse_mode": "Markdown",
         }
+
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
 
         if self.config.thread_id is not None:
             payload["message_thread_id"] = (
@@ -234,9 +244,8 @@ class TelegramBotClient:
 
         except urllib.error.HTTPError as error:
 
-            # Lê a resposta do Telegram para mostrar
-            # o motivo REAL do HTTP 400/403/etc.
             try:
+
                 raw_error_body = error.read()
 
                 decoded_error = raw_error_body.decode(
@@ -249,7 +258,9 @@ class TelegramBotClient:
                 )
 
                 description = (
-                    error_data.get("description")
+                    error_data.get(
+                        "description"
+                    )
                     if isinstance(
                         error_data,
                         dict,
@@ -258,6 +269,7 @@ class TelegramBotClient:
                 )
 
                 if description:
+
                     raise TelegramApiError(
                         f"Telegram respondeu com HTTP "
                         f"{error.code}. "
@@ -302,7 +314,10 @@ class TelegramBotClient:
 
             description = (
                 body.get("description")
-                if isinstance(body, dict)
+                if isinstance(
+                    body,
+                    dict,
+                )
                 else None
             )
 
@@ -500,44 +515,25 @@ def format_job_message(
     job: JobOpportunity,
 ) -> str:
 
-    roles = (
-        ", ".join(
-            matched_roles(job)
-        )
-        or "Vaga digital"
-    )
-
-    lines = [
-        f"*📢 {job.title}*",
-    ]
-
-    if roles:
-        lines.append(
-            f"💼 *Área:* {roles}"
-        )
-
-    if job.company:
-        lines.append(
-            f"🏢 *Empresa:* {job.company}"
-        )
-
-    if job.location_text:
-        lines.append(
-            f"📍 *Localização:* "
-            f"{job.location_text}"
-        )
-
-    lines.append(
-        f"🔎 *Fonte:* {job.source}"
-    )
-
-    lines.append("")
-    lines.append(
-        "👇 *ACESSE A OPORTUNIDADE:*"
-    )
-
     return "\n".join(
-        lines
+        [
+            f"📢 {job.title}",
+            "",
+            f"💼 Área: {', '.join(matched_roles(job)) or 'Vaga digital'}",
+            (
+                f"🏢 Empresa: {job.company}"
+                if job.company
+                else ""
+            ),
+            (
+                f"📍 Localização: {job.location_text}"
+                if job.location_text
+                else ""
+            ),
+            f"🔎 Fonte: {job.source}",
+            "",
+            "👇 ACESSE A OPORTUNIDADE:",
+        ]
     )
 
 
