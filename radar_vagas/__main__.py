@@ -7,6 +7,7 @@ import asyncio
 
 from radar_vagas.collectors.lever import LeverCollector
 from radar_vagas.config import Settings
+from radar_vagas.core.models import JobOpportunity
 from radar_vagas.core.pipeline import JobPipeline
 from radar_vagas.publishing.telegram import (
     TEST_MESSAGE,
@@ -84,6 +85,108 @@ https://pay.kiwify.com.br/7JDByUZ""",
 }
 
 
+def _escape_markdown(text: str) -> str:
+    """Escapa caracteres especiais do Markdown legado do Telegram."""
+
+    for character in (
+        "_",
+        "*",
+        "`",
+        "[",
+    ):
+        text = text.replace(
+            character,
+            "\\" + character,
+        )
+
+    return text
+
+
+def format_job_message(
+    job: JobOpportunity,
+) -> str:
+    """Monta a mensagem da vaga sem expor a URL."""
+
+    title = _escape_markdown(
+        str(job.title)
+    )
+
+    roles = (
+        ", ".join(
+            matched_roles_safe(job)
+        )
+        or "Vaga digital"
+    )
+
+    roles = _escape_markdown(
+        roles
+    )
+
+    company = (
+        _escape_markdown(
+            str(job.company)
+        )
+        if job.company
+        else None
+    )
+
+    location = (
+        _escape_markdown(
+            str(job.location_text)
+        )
+        if job.location_text
+        else None
+    )
+
+    source = _escape_markdown(
+        str(job.source)
+    )
+
+    lines = [
+        f"*📢 {title}*",
+        "",
+        f"💼 *Área:* {roles}",
+    ]
+
+    if company:
+        lines.append(
+            f"🏢 *Empresa:* {company}"
+        )
+
+    if location:
+        lines.append(
+            f"📍 *Localização:* {location}"
+        )
+
+    lines.append(
+        f"🔎 *Fonte:* {source}"
+    )
+
+    lines.append("")
+    lines.append(
+        "👇 *ACESSE A OPORTUNIDADE:*"
+    )
+
+    return "\n".join(
+        lines
+    )
+
+
+def matched_roles_safe(
+    job: JobOpportunity,
+) -> list[str]:
+    """Obtém os cargos correspondentes de forma segura."""
+
+    from radar_vagas.core.roles import matched_roles
+
+    try:
+        return list(
+            matched_roles(job)
+        )
+    except Exception:
+        return []
+
+
 async def _run() -> int:
     settings = Settings.from_env()
 
@@ -103,32 +206,41 @@ async def _run() -> int:
         store,
     ).run()
 
-    print("Radar de Vagas Digitais Brasil")
+    print(
+        "Radar de Vagas Digitais Brasil"
+    )
+
     print(
         f"Vagas coletadas: "
         f"{result.collected_count}"
     )
+
     print(
         f"Correspondências de cargo: "
         f"{result.role_matches_count}"
     )
+
     print(
         f"Elegíveis para o Brasil: "
         f"{result.brazil_eligible_count}"
     )
+
     print(
         f"Vagas novas: "
         f"{len(result.unique_jobs)}"
     )
 
     if not result.unique_jobs:
+
         print(
             "Nenhuma vaga nova para publicar "
             "no Telegram."
         )
+
         return 0
 
     try:
+
         client = TelegramBotClient(
             TelegramConfig.from_settings(
                 settings
@@ -139,13 +251,10 @@ async def _run() -> int:
 
         for job in result.unique_jobs:
 
-            # Texto da vaga sem a URL aparecendo.
             message = format_job_message(
                 job
             )
 
-            # A URL fica escondida dentro
-            # do botão.
             buttons = [
                 [
                     {
@@ -189,7 +298,9 @@ async def _run() -> int:
 
 
 async def _check_telegram() -> int:
+
     try:
+
         client = TelegramBotClient(
             TelegramConfig.from_settings(
                 Settings.from_env()
@@ -215,11 +326,14 @@ async def _check_telegram() -> int:
     )
 
     if username:
+
         print(
             f"Conexão com o bot confirmada "
             f"(@{username})."
         )
+
     else:
+
         print(
             "Conexão com o bot confirmada."
         )
@@ -232,7 +346,9 @@ async def _check_telegram() -> int:
 
 
 async def _send_telegram_test() -> int:
+
     try:
+
         client = TelegramBotClient(
             TelegramConfig.from_settings(
                 Settings.from_env()
@@ -279,6 +395,7 @@ async def _send_material(
     ]
 
     try:
+
         client = TelegramBotClient(
             TelegramConfig.from_settings(
                 Settings.from_env()
@@ -317,6 +434,7 @@ async def _discover_telegram_topic(
 ) -> int:
 
     try:
+
         client = TelegramBotClient(
             TelegramConfig.from_settings(
                 Settings.from_env()
@@ -343,6 +461,7 @@ async def _discover_telegram_topic(
         return 1
 
     if destination is None:
+
         print(
             "Nenhuma mensagem de tópico "
             f"foi recebida nos últimos "
@@ -378,42 +497,6 @@ async def _discover_telegram_topic(
     return 0
 
 
-def format_job_message(
-    job,
-) -> str:
-
-    lines = [
-        f"📢 {job.title}"
-    ]
-
-    if job.company:
-        lines.append(
-            f"Empresa: {job.company}"
-        )
-
-    if job.location_text:
-        lines.append(
-            f"Localização: "
-            f"{job.location_text}"
-        )
-
-    lines.append(
-        f"Fonte: {job.source}"
-    )
-
-    lines.append(
-        ""
-    )
-
-    lines.append(
-        "👇 Acesse a oportunidade:"
-    )
-
-    return "\n".join(
-        lines
-    )
-
-
 def main() -> int:
 
     parser = argparse.ArgumentParser(
@@ -424,7 +507,8 @@ def main() -> int:
     )
 
     actions = (
-        parser.add_mutually_exclusive_group()
+        parser
+        .add_mutually_exclusive_group()
     )
 
     actions.add_argument(
@@ -508,6 +592,7 @@ def main() -> int:
         arguments.confirm_send_test
         and not arguments.send_test
     ):
+
         parser.error(
             "--confirm-send-test só pode "
             "ser usado com --send-test"
@@ -517,28 +602,33 @@ def main() -> int:
         arguments.send_test
         and not arguments.confirm_send_test
     ):
+
         parser.error(
             "--send-test exige "
             "--confirm-send-test"
         )
 
     if arguments.wait_seconds <= 0:
+
         parser.error(
             "--wait-seconds deve ser "
             "maior que zero"
         )
 
     if arguments.check_telegram:
+
         return asyncio.run(
             _check_telegram()
         )
 
     if arguments.send_test:
+
         return asyncio.run(
             _send_telegram_test()
         )
 
     if arguments.discover_telegram_topic:
+
         return asyncio.run(
             _discover_telegram_topic(
                 arguments.topic_name,
@@ -547,6 +637,7 @@ def main() -> int:
         )
 
     if arguments.send_material:
+
         return asyncio.run(
             _send_material(
                 arguments.send_material,
@@ -560,6 +651,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+
     raise SystemExit(
         main()
     )
