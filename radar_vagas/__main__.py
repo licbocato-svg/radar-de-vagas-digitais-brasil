@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from html import escape
 
 from radar_vagas.collectors.lever import LeverCollector
 from radar_vagas.config import Settings
@@ -85,45 +86,29 @@ https://pay.kiwify.com.br/7JDByUZ""",
 }
 
 
-def _escape_markdown(text: str) -> str:
-    """Escapa caracteres especiais do Markdown legado do Telegram."""
-
-    for character in (
-        "_",
-        "*",
-        "`",
-        "[",
-    ):
-        text = text.replace(
-            character,
-            "\\" + character,
-        )
-
-    return text
-
-
-def format_job_message(
+def format_job_message_html(
     job: JobOpportunity,
 ) -> str:
-    """Monta a mensagem da vaga sem expor a URL."""
+    """Monta a mensagem da vaga usando HTML seguro."""
 
-    title = _escape_markdown(
+    title = escape(
         str(job.title)
     )
 
     roles = (
         ", ".join(
-            matched_roles_safe(job)
+            str(role)
+            for role in matched_roles_safe(job)
         )
         or "Vaga digital"
     )
 
-    roles = _escape_markdown(
+    roles = escape(
         roles
     )
 
     company = (
-        _escape_markdown(
+        escape(
             str(job.company)
         )
         if job.company
@@ -131,40 +116,40 @@ def format_job_message(
     )
 
     location = (
-        _escape_markdown(
+        escape(
             str(job.location_text)
         )
         if job.location_text
         else None
     )
 
-    source = _escape_markdown(
+    source = escape(
         str(job.source)
     )
 
     lines = [
-        f"*📢 {title}*",
+        f"<b>📢 {title}</b>",
         "",
-        f"💼 *Área:* {roles}",
+        f"💼 <b>Área:</b> {roles}",
     ]
 
     if company:
         lines.append(
-            f"🏢 *Empresa:* {company}"
+            f"🏢 <b>Empresa:</b> {company}"
         )
 
     if location:
         lines.append(
-            f"📍 *Localização:* {location}"
+            f"📍 <b>Localização:</b> {location}"
         )
 
     lines.append(
-        f"🔎 *Fonte:* {source}"
+        f"🔎 <b>Fonte:</b> {source}"
     )
 
     lines.append("")
     lines.append(
-        "👇 *ACESSE A OPORTUNIDADE:*"
+        "👇 <b>ACESSE A OPORTUNIDADE:</b>"
     )
 
     return "\n".join(
@@ -177,17 +162,19 @@ def matched_roles_safe(
 ) -> list[str]:
     """Obtém os cargos correspondentes de forma segura."""
 
-    from radar_vagas.core.roles import matched_roles
-
     try:
+
         return list(
             matched_roles(job)
         )
+
     except Exception:
+
         return []
 
 
 async def _run() -> int:
+
     settings = Settings.from_env()
 
     store = JsonSeenJobStore(
@@ -251,7 +238,7 @@ async def _run() -> int:
 
         for job in result.unique_jobs:
 
-            message = format_job_message(
+            message = format_job_message_html(
                 job
             )
 
@@ -262,7 +249,9 @@ async def _run() -> int:
                             "🔎 VER VAGA E "
                             "SE CANDIDATAR"
                         ),
-                        "url": job.url,
+                        "url": str(
+                            job.url
+                        ),
                     }
                 ]
             ]
@@ -270,6 +259,7 @@ async def _run() -> int:
             await client.send_message_with_buttons(
                 message,
                 buttons,
+                parse_mode="HTML",
             )
 
             print(
