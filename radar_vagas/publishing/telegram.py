@@ -28,7 +28,11 @@ class TelegramConfig:
         settings: Settings,
     ) -> "TelegramConfig":
         token, chat_id, thread_id = settings.require_telegram()
-        return cls(token, chat_id, thread_id)
+        return cls(
+            bot_token=token,
+            chat_id=chat_id,
+            thread_id=thread_id,
+        )
 
 
 class TelegramApiError(RuntimeError):
@@ -84,7 +88,6 @@ class TelegramBotClient:
         offset: int | None = None,
         poll_timeout_seconds: int = 0,
     ) -> tuple[Mapping[str, Any], ...]:
-        """Obtém mensagens e eventos de entrada de membros."""
 
         payload: dict[str, Any] = {
             "timeout": max(
@@ -158,12 +161,8 @@ class TelegramBotClient:
         payload: dict[str, Any] = {
             "chat_id": self.config.chat_id,
             "text": text,
-
-            # Permite usar *texto* para negrito
-            # nas mensagens enviadas ao Telegram.
-            "parse_mode": "Markdown",
-
             "disable_web_page_preview": True,
+            "parse_mode": "Markdown",
         }
 
         if self.config.thread_id is not None:
@@ -212,14 +211,11 @@ class TelegramBotClient:
 
         request = urllib.request.Request(
             endpoint,
-            data=(
-                json.dumps(payload)
-                .encode("utf-8")
-                if payload
-                else None
-            ),
+            data=json.dumps(
+                payload
+            ).encode("utf-8"),
             headers={
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             },
             method="POST",
         )
@@ -237,6 +233,42 @@ class TelegramBotClient:
                 raw_body = response.read()
 
         except urllib.error.HTTPError as error:
+
+            # Lê a resposta do Telegram para mostrar
+            # o motivo REAL do HTTP 400/403/etc.
+            try:
+                raw_error_body = error.read()
+
+                decoded_error = raw_error_body.decode(
+                    "utf-8",
+                    errors="replace",
+                )
+
+                error_data = json.loads(
+                    decoded_error
+                )
+
+                description = (
+                    error_data.get("description")
+                    if isinstance(
+                        error_data,
+                        dict,
+                    )
+                    else None
+                )
+
+                if description:
+                    raise TelegramApiError(
+                        f"Telegram respondeu com HTTP "
+                        f"{error.code}. "
+                        f"Detalhe: {description}"
+                    ) from error
+
+            except TelegramApiError:
+                raise
+
+            except Exception:
+                pass
 
             raise TelegramApiError(
                 f"Telegram respondeu com HTTP {error.code}."
@@ -307,10 +339,7 @@ class TelegramBotClient:
 
         deadline = (
             loop.time()
-            + max(
-                1,
-                wait_seconds,
-            )
+            + max(1, wait_seconds)
         )
 
         while loop.time() < deadline:
@@ -479,25 +508,32 @@ def format_job_message(
     )
 
     lines = [
-        f"{job.title} — {roles}"
+        f"*📢 {job.title}*",
     ]
+
+    if roles:
+        lines.append(
+            f"💼 *Área:* {roles}"
+        )
 
     if job.company:
         lines.append(
-            f"Empresa: {job.company}"
+            f"🏢 *Empresa:* {job.company}"
         )
 
     if job.location_text:
         lines.append(
-            f"Localização: {job.location_text}"
+            f"📍 *Localização:* "
+            f"{job.location_text}"
         )
 
     lines.append(
-        f"Fonte: {job.source}"
+        f"🔎 *Fonte:* {job.source}"
     )
 
+    lines.append("")
     lines.append(
-        job.url
+        "👇 *ACESSE A OPORTUNIDADE:*"
     )
 
     return "\n".join(
