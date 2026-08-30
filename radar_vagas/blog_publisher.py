@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import re
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 from radar_vagas.config import Settings
 from radar_vagas.publishing.telegram import (
@@ -21,6 +23,7 @@ STATE_FILE_NAME = "blog_last_published.json"
 
 
 def _fetch_feed() -> bytes:
+    """Consulta o feed RSS do blog."""
 
     request = urllib.request.Request(
         FEED_URL,
@@ -37,9 +40,90 @@ def _fetch_feed() -> bytes:
         return response.read()
 
 
+def _stable_post_id(
+    link: str,
+    guid: str,
+) -> str:
+    """
+    Cria um identificador estável para o artigo.
+
+    Prioridade:
+    1. ID numérico do WordPress (?p=10901).
+    2. GUID do RSS.
+    3. URL do artigo.
+    """
+
+    # --------------------------------------------------------
+    # Tenta encontrar o ID do WordPress na URL.
+    # Exemplo:
+    # https://quebreiodespertador.com/?p=10901
+    # --------------------------------------------------------
+
+    try:
+
+        parsed = urlsplit(
+            link.strip()
+        )
+
+        query = parse_qs(
+            parsed.query
+        )
+
+        post_ids = query.get(
+            "p"
+        )
+
+        if post_ids:
+
+            post_id = post_ids[0].strip()
+
+            if post_id:
+
+                return f"wordpress:{post_id}"
+
+    except Exception:
+        pass
+
+    # --------------------------------------------------------
+    # Também aceita URLs que contenham ?p=10901
+    # mesmo que tenham outros parâmetros.
+    # --------------------------------------------------------
+
+    match = re.search(
+        r"[?&]p=(\d+)",
+        link,
+        flags=re.IGNORECASE,
+    )
+
+    if match:
+
+        return (
+            f"wordpress:{match.group(1)}"
+        )
+
+    # --------------------------------------------------------
+    # Se não houver ID WordPress, usa o GUID.
+    # --------------------------------------------------------
+
+    if guid.strip():
+
+        return (
+            f"guid:{guid.strip()}"
+        )
+
+    # --------------------------------------------------------
+    # Último recurso: URL.
+    # --------------------------------------------------------
+
+    return (
+        f"url:{link.strip()}"
+    )
+
+
 def _latest_post(
     feed: bytes,
 ) -> tuple[str, str, str] | None:
+    """Obtém o artigo mais recente do feed."""
 
     root = ET.fromstring(
         feed
@@ -50,6 +134,7 @@ def _latest_post(
     )
 
     if channel is None:
+
         return None
 
     item = channel.find(
@@ -57,34 +142,53 @@ def _latest_post(
     )
 
     if item is None:
+
         return None
 
     title = (
-        item.findtext("title")
+        item.findtext(
+            "title"
+        )
         or ""
     ).strip()
 
     link = (
-        item.findtext("link")
+        item.findtext(
+            "link"
+        )
         or ""
     ).strip()
 
     guid = (
-        item.findtext("guid")
-        or link
+        item.findtext(
+            "guid"
+        )
+        or ""
     ).strip()
 
     if not title or not link:
+
         return None
 
-    return title, link, guid
+    entry_id = _stable_post_id(
+        link,
+        guid,
+    )
+
+    return (
+        title,
+        link,
+        entry_id,
+    )
 
 
 def _load_last_id(
     path: Path,
 ) -> str | None:
+    """Carrega o identificador do último artigo publicado."""
 
     if not path.exists():
+
         return None
 
     try:
@@ -95,18 +199,25 @@ def _load_last_id(
             )
         )
 
+        if not isinstance(
+            data,
+            dict,
+        ):
+
+            return None
+
         value = data.get(
             "last_published_id"
         )
 
-        return (
-            value
-            if isinstance(
-                value,
-                str,
-            )
-            else None
-        )
+        if isinstance(
+            value,
+            str,
+        ):
+
+            return value
+
+        return None
 
     except (
         OSError,
@@ -120,6 +231,7 @@ def _save_last_id(
     path: Path,
     value: str,
 ) -> None:
+    """Salva o identificador do último artigo publicado."""
 
     path.parent.mkdir(
         parents=True,
@@ -147,6 +259,7 @@ def _save_last_id(
 
 
 async def publish_new_blog_post() -> int:
+    """Publica somente se houver um artigo realmente novo."""
 
     settings = Settings.from_env()
 
@@ -154,6 +267,10 @@ async def publish_new_blog_post() -> int:
         settings.data_dir
         / STATE_FILE_NAME
     )
+
+    # --------------------------------------------------------
+    # Consulta o feed.
+    # --------------------------------------------------------
 
     try:
 
@@ -167,7 +284,8 @@ async def publish_new_blog_post() -> int:
     ) as error:
 
         print(
-            f"Falha ao consultar o feed do blog: {error}"
+            "Falha ao consultar o feed "
+            f"do blog: {error}"
         )
 
         return 1
@@ -183,9 +301,41 @@ async def publish_new_blog_post() -> int:
 
     title, link, entry_id = entry
 
+    # --------------------------------------------------------
+    # Carrega o último artigo publicado.
+    # --------------------------------------------------------
+
     last_id = _load_last_id(
         state_path
     )
+
+    print(
+        f"Artigo mais recente encontrado: "
+        f"{title}"
+    )
+
+    print(
+        f"ID do artigo encontrado: "
+        f"{entry_id}"
+    )
+
+    if last_id:
+
+        print(
+            f"Último artigo registrado: "
+            f"{last_id}"
+        )
+
+    else:
+
+        print(
+            "Nenhum artigo anterior "
+            "registrado no histórico."
+        )
+
+    # --------------------------------------------------------
+    # Se for o mesmo artigo, NÃO publica.
+    # --------------------------------------------------------
 
     if last_id == entry_id:
 
@@ -194,6 +344,10 @@ async def publish_new_blog_post() -> int:
         )
 
         return 0
+
+    # --------------------------------------------------------
+    # Mensagem.
+    # --------------------------------------------------------
 
     message = (
         "📝 *NOVO CONTEÚDO NO BLOG*\n\n"
@@ -207,11 +361,17 @@ async def publish_new_blog_post() -> int:
     buttons = [
         [
             {
-                "text": "📰 LER O ARTIGO COMPLETO",
+                "text": (
+                    "📰 LER O ARTIGO COMPLETO"
+                ),
                 "url": link,
             }
         ]
     ]
+
+    # --------------------------------------------------------
+    # Envia para o Telegram.
+    # --------------------------------------------------------
 
     try:
 
@@ -236,11 +396,16 @@ async def publish_new_blog_post() -> int:
     ) as error:
 
         print(
-            f"Falha ao publicar artigo "
+            "Falha ao publicar artigo "
             f"no Telegram: {error}"
         )
 
         return 1
+
+    # --------------------------------------------------------
+    # Só salva o histórico depois que o Telegram
+    # confirmou o envio.
+    # --------------------------------------------------------
 
     _save_last_id(
         state_path,
@@ -248,11 +413,17 @@ async def publish_new_blog_post() -> int:
     )
 
     print(
-        f"Artigo publicado no Telegram: {title}"
+        f"Artigo publicado no Telegram: "
+        f"{title}"
     )
 
     print(
         "Botão do artigo enviado com sucesso."
+    )
+
+    print(
+        f"Histórico atualizado: "
+        f"{entry_id}"
     )
 
     return 0
@@ -260,10 +431,8 @@ async def publish_new_blog_post() -> int:
 
 if __name__ == "__main__":
 
-    import asyncio
-
     raise SystemExit(
-        asyncio.run(
+        __import__("asyncio").run(
             publish_new_blog_post()
         )
     )
