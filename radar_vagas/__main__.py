@@ -10,13 +10,17 @@ from radar_vagas.collectors.lever import LeverCollector
 from radar_vagas.config import Settings
 from radar_vagas.core.models import JobOpportunity
 from radar_vagas.core.pipeline import JobPipeline
+from radar_vagas.core.roles import matched_roles
 from radar_vagas.publishing.telegram import (
     TEST_MESSAGE,
     TelegramApiError,
     TelegramBotClient,
     TelegramConfig,
 )
-from radar_vagas.storage.seen_jobs import JsonSeenJobStore
+from radar_vagas.storage.seen_jobs import (
+    JsonSeenJobStore,
+    job_fingerprint,
+)
 
 
 MATERIALS = {
@@ -95,13 +99,16 @@ def format_job_message_html(
         str(job.title)
     )
 
-    roles = (
-        ", ".join(
+    try:
+        roles = ", ".join(
             str(role)
-            for role in matched_roles_safe(job)
+            for role in matched_roles(job)
         )
-        or "Vaga digital"
-    )
+    except Exception:
+        roles = ""
+
+    if not roles:
+        roles = "Vaga digital"
 
     roles = escape(
         roles
@@ -157,22 +164,6 @@ def format_job_message_html(
     )
 
 
-def matched_roles_safe(
-    job: JobOpportunity,
-) -> list[str]:
-    """Obtém os cargos correspondentes de forma segura."""
-
-    try:
-
-        return list(
-            matched_roles(job)
-        )
-
-    except Exception:
-
-        return []
-
-
 async def _run() -> int:
 
     settings = Settings.from_env()
@@ -213,7 +204,7 @@ async def _run() -> int:
     )
 
     print(
-        f"Vagas novas: "
+        f"Vagas novas disponíveis: "
         f"{len(result.unique_jobs)}"
     )
 
@@ -226,6 +217,20 @@ async def _run() -> int:
 
         return 0
 
+    # ========================================================
+    # PUBLICA SOMENTE UMA VAGA POR EXECUÇÃO
+    # ========================================================
+
+    job = result.unique_jobs[0]
+
+    print(
+        "Vaga selecionada para esta execução:"
+    )
+
+    print(
+        f"  {job.title}"
+    )
+
     try:
 
         client = TelegramBotClient(
@@ -236,36 +241,56 @@ async def _run() -> int:
 
         await client.get_me()
 
-        for job in result.unique_jobs:
+        message = format_job_message_html(
+            job
+        )
 
-            message = format_job_message_html(
-                job
-            )
-
-            buttons = [
-                [
-                    {
-                        "text": (
-                            "🔎 VER VAGA E "
-                            "SE CANDIDATAR"
-                        ),
-                        "url": str(
-                            job.url
-                        ),
-                    }
-                ]
+        buttons = [
+            [
+                {
+                    "text": (
+                        "🔎 VER VAGA E "
+                        "SE CANDIDATAR"
+                    ),
+                    "url": str(
+                        job.url
+                    ),
+                }
             ]
+        ]
 
-            await client.send_message_with_buttons(
-                message,
-                buttons,
-                parse_mode="HTML",
-            )
+        # ----------------------------------------------------
+        # ENVIA A VAGA
+        # ----------------------------------------------------
 
-            print(
-                f"Vaga publicada com botão: "
-                f"{job.title}"
-            )
+        await client.send_message_with_buttons(
+            message,
+            buttons,
+            parse_mode="HTML",
+        )
+
+        # ----------------------------------------------------
+        # SOMENTE DEPOIS DO ENVIO BEM-SUCEDIDO,
+        # REGISTRA A VAGA COMO PUBLICADA.
+        # ----------------------------------------------------
+
+        fingerprint = job_fingerprint(
+            job
+        )
+
+        store.remember_many(
+            [fingerprint]
+        )
+
+        print(
+            f"Vaga publicada com botão: "
+            f"{job.title}"
+        )
+
+        print(
+            "Vaga registrada no histórico "
+            "de publicadas."
+        )
 
     except (
         RuntimeError,
@@ -280,8 +305,7 @@ async def _run() -> int:
         return 1
 
     print(
-        "Vagas publicadas no Telegram: "
-        f"{len(result.unique_jobs)}"
+        "Vagas publicadas no Telegram: 1"
     )
 
     return 0
