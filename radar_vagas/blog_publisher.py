@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import urllib.request
@@ -36,93 +37,148 @@ def _fetch_feed() -> bytes:
         request,
         timeout=30,
     ) as response:
-
         return response.read()
 
 
-def _stable_post_id(
-    link: str,
-    guid: str,
-) -> str:
+def _extract_wordpress_id(
+    value: str,
+) -> str | None:
     """
-    Cria um identificador estável para o artigo.
+    Tenta extrair o ID numérico de um artigo WordPress.
 
-    Prioridade:
-    1. ID numérico do WordPress (?p=10901).
-    2. GUID do RSS.
-    3. URL do artigo.
+    Exemplos reconhecidos:
+
+    https://quebreiodespertador.com/?p=10901
+    https://quebreiodespertador.com/?p=10901&utm_source=...
     """
+
+    if not value:
+        return None
+
+    text = value.strip()
 
     # --------------------------------------------------------
-    # Tenta encontrar o ID do WordPress na URL.
-    # Exemplo:
-    # https://quebreiodespertador.com/?p=10901
+    # Tenta analisar a URL.
     # --------------------------------------------------------
 
     try:
-
-        parsed = urlsplit(
-            link.strip()
-        )
+        parsed = urlsplit(text)
 
         query = parse_qs(
-            parsed.query
+            parsed.query,
+            keep_blank_values=True,
         )
 
-        post_ids = query.get(
-            "p"
-        )
+        post_ids = query.get("p")
 
         if post_ids:
 
             post_id = post_ids[0].strip()
 
-            if post_id:
-
-                return f"wordpress:{post_id}"
+            if post_id.isdigit():
+                return post_id
 
     except Exception:
         pass
 
     # --------------------------------------------------------
-    # Também aceita URLs que contenham ?p=10901
-    # mesmo que tenham outros parâmetros.
+    # Fallback: procura ?p=10901 ou &p=10901.
     # --------------------------------------------------------
 
     match = re.search(
-        r"[?&]p=(\d+)",
-        link,
+        r"(?:\?|&)p=(\d+)",
+        text,
         flags=re.IGNORECASE,
     )
 
     if match:
+        return match.group(1)
 
-        return (
-            f"wordpress:{match.group(1)}"
-        )
+    return None
 
-    # --------------------------------------------------------
-    # Se não houver ID WordPress, usa o GUID.
-    # --------------------------------------------------------
 
-    if guid.strip():
+def _normalize_identifier(
+    value: str,
+) -> str:
+    """
+    Normaliza um identificador para comparação.
 
-        return (
-            f"guid:{guid.strip()}"
-        )
+    Se encontrar um ID WordPress, usa:
 
-    # --------------------------------------------------------
-    # Último recurso: URL.
-    # --------------------------------------------------------
+        wordpress:10901
 
-    return (
-        f"url:{link.strip()}"
+    Caso contrário, preserva o valor de forma normalizada.
+    """
+
+    value = value.strip()
+
+    if not value:
+        return ""
+
+    wordpress_id = _extract_wordpress_id(
+        value
     )
+
+    if wordpress_id:
+        return (
+            f"wordpress:{wordpress_id}"
+        )
+
+    return value.rstrip("/").casefold()
+
+
+def _identifiers_for_post(
+    link: str,
+    guid: str,
+) -> set[str]:
+    """
+    Cria todas as identificações possíveis para o artigo.
+
+    Isso permite reconhecer o mesmo artigo mesmo quando
+    o RSS apresenta o GUID e o link em formatos diferentes.
+    """
+
+    identifiers: set[str] = set()
+
+    for value in (
+        link,
+        guid,
+    ):
+
+        if not value:
+            continue
+
+        normalized = _normalize_identifier(
+            value
+        )
+
+        if normalized:
+            identifiers.add(
+                normalized
+            )
+
+    # Também adiciona explicitamente o ID WordPress.
+    for value in (
+        link,
+        guid,
+    ):
+
+        wordpress_id = _extract_wordpress_id(
+            value
+        )
+
+        if wordpress_id:
+
+            identifiers.add(
+                f"wordpress:{wordpress_id}"
+            )
+
+    return identifiers
 
 
 def _latest_post(
     feed: bytes,
-) -> tuple[str, str, str] | None:
+) -> tuple[str, str, str, tuple[str, ...]] | None:
     """Obtém o artigo mais recente do feed."""
 
     root = ET.fromstring(
@@ -134,7 +190,6 @@ def _latest_post(
     )
 
     if channel is None:
-
         return None
 
     item = channel.find(
@@ -142,7 +197,6 @@ def _latest_post(
     )
 
     if item is None:
-
         return None
 
     title = (
@@ -167,29 +221,61 @@ def _latest_post(
     ).strip()
 
     if not title or not link:
-
         return None
 
-    entry_id = _stable_post_id(
+    identifiers = _identifiers_for_post(
         link,
         guid,
     )
 
+    if not identifiers:
+        return None
+
+    # Usa o identificador mais estável disponível.
+    wordpress_id = _extract_wordpress_id(
+        link
+    )
+
+    if wordpress_id:
+        primary_id = (
+            f"wordpress:{wordpress_id}"
+        )
+    else:
+
+        wordpress_id = _extract_wordpress_id(
+            guid
+        )
+
+        if wordpress_id:
+            primary_id = (
+                f"wordpress:{wordpress_id}"
+            )
+        else:
+            primary_id = (
+                _normalize_identifier(
+                    guid or link
+                )
+            )
+
     return (
         title,
         link,
-        entry_id,
+        primary_id,
+        tuple(sorted(identifiers)),
     )
 
 
-def _load_last_id(
+def _load_last_ids(
     path: Path,
-) -> str | None:
-    """Carrega o identificador do último artigo publicado."""
+) -> set[str]:
+    """
+    Carrega o histórico do último artigo publicado.
+
+    Aceita tanto o formato antigo quanto o novo.
+    """
 
     if not path.exists():
-
-        return None
+        return set()
 
     try:
 
@@ -199,39 +285,46 @@ def _load_last_id(
             )
         )
 
-        if not isinstance(
-            data,
-            dict,
-        ):
-
-            return None
-
-        value = data.get(
-            "last_published_id"
-        )
-
-        if isinstance(
-            value,
-            str,
-        ):
-
-            return value
-
-        return None
-
     except (
         OSError,
         json.JSONDecodeError,
     ):
 
-        return None
+        return set()
+
+    if not isinstance(
+        data,
+        dict,
+    ):
+        return set()
+
+    value = data.get(
+        "last_published_id"
+    )
+
+    if not isinstance(
+        value,
+        str,
+    ):
+        return set()
+
+    normalized = _normalize_identifier(
+        value
+    )
+
+    if not normalized:
+        return set()
+
+    return {
+        normalized
+    }
 
 
 def _save_last_id(
     path: Path,
     value: str,
 ) -> None:
-    """Salva o identificador do último artigo publicado."""
+    """Salva o identificador estável do último artigo publicado."""
 
     path.parent.mkdir(
         parents=True,
@@ -299,13 +392,18 @@ async def publish_new_blog_post() -> int:
 
         return 0
 
-    title, link, entry_id = entry
+    (
+        title,
+        link,
+        primary_id,
+        entry_identifiers,
+    ) = entry
 
     # --------------------------------------------------------
-    # Carrega o último artigo publicado.
+    # Carrega o histórico.
     # --------------------------------------------------------
 
-    last_id = _load_last_id(
+    last_ids = _load_last_ids(
         state_path
     )
 
@@ -315,15 +413,20 @@ async def publish_new_blog_post() -> int:
     )
 
     print(
-        f"ID do artigo encontrado: "
-        f"{entry_id}"
+        f"ID estável do artigo: "
+        f"{primary_id}"
     )
 
-    if last_id:
+    print(
+        "Identificadores encontrados: "
+        f"{', '.join(entry_identifiers)}"
+    )
+
+    if last_ids:
 
         print(
-            f"Último artigo registrado: "
-            f"{last_id}"
+            "Último identificador registrado: "
+            f"{', '.join(sorted(last_ids))}"
         )
 
     else:
@@ -334,10 +437,15 @@ async def publish_new_blog_post() -> int:
         )
 
     # --------------------------------------------------------
-    # Se for o mesmo artigo, NÃO publica.
+    # COMPARAÇÃO ROBUSTA
+    #
+    # Se qualquer identificador do artigo atual coincidir
+    # com o histórico, consideramos que já foi publicado.
     # --------------------------------------------------------
 
-    if last_id == entry_id:
+    if last_ids.intersection(
+        entry_identifiers
+    ):
 
         print(
             "Nenhum artigo novo no blog."
@@ -403,13 +511,13 @@ async def publish_new_blog_post() -> int:
         return 1
 
     # --------------------------------------------------------
-    # Só salva o histórico depois que o Telegram
-    # confirmou o envio.
+    # SOMENTE DEPOIS DO ENVIO BEM-SUCEDIDO,
+    # salva o histórico.
     # --------------------------------------------------------
 
     _save_last_id(
         state_path,
-        entry_id,
+        primary_id,
     )
 
     print(
@@ -423,7 +531,7 @@ async def publish_new_blog_post() -> int:
 
     print(
         f"Histórico atualizado: "
-        f"{entry_id}"
+        f"{primary_id}"
     )
 
     return 0
@@ -432,7 +540,7 @@ async def publish_new_blog_post() -> int:
 if __name__ == "__main__":
 
     raise SystemExit(
-        __import__("asyncio").run(
+        asyncio.run(
             publish_new_blog_post()
         )
     )
