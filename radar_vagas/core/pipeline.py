@@ -36,40 +36,26 @@ class JobPipeline:
         self.seen_store = seen_store
 
     async def run(self) -> PipelineResult:
-
         collected: list[JobOpportunity] = []
 
-        # ========================================================
-        # 1. COLETA
-        # ========================================================
-
         for collector in self.collectors:
-            collector_name = getattr(
-                collector,
-                "name",
-                collector.__class__.__name__,
-            )
-
             try:
                 jobs = await collector.collect()
 
                 print(
-                    f"[COLETOR] {collector_name}: "
+                    f"[COLETOR] "
+                    f"{getattr(collector, 'name', collector.__class__.__name__)}: "
                     f"{len(jobs)} vagas coletadas"
                 )
 
                 collected.extend(jobs)
 
             except Exception as error:
-
                 print(
-                    f"[ERRO] Falha no coletor "
-                    f"{collector_name}: {error}"
+                    f"[ERRO COLETOR] "
+                    f"{getattr(collector, 'name', collector.__class__.__name__)}: "
+                    f"{error}"
                 )
-
-        # ========================================================
-        # 2. FILTRO POR CARGO
-        # ========================================================
 
         role_matches = [
             job
@@ -77,105 +63,41 @@ class JobPipeline:
             if matches_target_role(job)
         ]
 
-        # ========================================================
-        # 3. FILTRO DE ELEGIBILIDADE PARA O BRASIL
-        # ========================================================
-
         brazil_eligible = [
             job
             for job in role_matches
             if eligible_for_brazil(job)
         ]
 
-        # ========================================================
-        # 4. DEDUPLICAÇÃO
-        # ========================================================
-
         unique_jobs: list[JobOpportunity] = []
-
         batch_fingerprints: set[str] = set()
 
         for job in brazil_eligible:
-
             fingerprint = job_fingerprint(job)
 
-            # ----------------------------------------------------
-            # DUPLICADA DENTRO DA MESMA EXECUÇÃO
-            # ----------------------------------------------------
-
             if fingerprint in batch_fingerprints:
-
-                print(
-                    "[DUPLICADA NA EXECUÇÃO] "
-                    f"{job.title} | "
-                    f"{job.company}"
-                )
-
                 continue
 
-            # ----------------------------------------------------
-            # JÁ PUBLICADA EM EXECUÇÃO ANTERIOR
-            # ----------------------------------------------------
-
-            if self.seen_store.contains(
-                fingerprint
-            ):
-
+            if self.seen_store.contains(fingerprint):
                 print(
-                    "[JÁ PUBLICADA] "
-                    f"{job.title} | "
-                    f"{job.company}"
+                    f"[JÁ PUBLICADA] "
+                    f"{job.title} | {job.company}"
                 )
-
-                print(
-                    f"  URL: {job.url}"
-                )
-
-                print(
-                    f"  Fonte: {job.source}"
-                )
-
-                print(
-                    f"  ID: "
-                    f"{job.external_id or 'sem ID'}"
-                )
-
+                print(f"  URL: {job.url}")
+                print(f"  Fonte: {job.source}")
+                print(f"  ID: {job.external_id or 'sem ID'}")
                 continue
 
-            # ----------------------------------------------------
-            # NOVA VAGA
-            # ----------------------------------------------------
-
-            batch_fingerprints.add(
-                fingerprint
-            )
-
-            unique_jobs.append(
-                job
-            )
-
             print(
-                "[NOVA VAGA] "
-                f"{job.title} | "
-                f"{job.company}"
+                f"[NOVA VAGA] "
+                f"{job.title} | {job.company}"
             )
+            print(f"  URL: {job.url}")
+            print(f"  Fonte: {job.source}")
+            print(f"  ID: {job.external_id or 'sem ID'}")
 
-            print(
-                f"  URL: {job.url}"
-            )
-
-            print(
-                f"  Fonte: {job.source}"
-            )
-
-            print(
-                f"  ID: "
-                f"{job.external_id or 'sem ID'}"
-            )
-
-        # ========================================================
-        # RESULTADO
-        # ========================================================
+            batch_fingerprints.add(fingerprint)
+            unique_jobs.append(job)
 
         return PipelineResult(
             collected_count=len(collected),
