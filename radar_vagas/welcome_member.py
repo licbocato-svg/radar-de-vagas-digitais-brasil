@@ -6,6 +6,7 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Any
+from html import escape
 
 from radar_vagas.config import Settings
 from radar_vagas.publishing.telegram import (
@@ -48,12 +49,12 @@ TOPIC_BUTTONS = [
 
 
 # ============================================================
-# MENSAGEM ÚNICA DE BOAS-VINDAS
+# MENSAGEM DE BOAS-VINDAS
 # ============================================================
 
-WELCOME_MESSAGE = """👋 Bem-vindo(a) ao Clube Home Office, {name}!
+WELCOME_MESSAGE = """👋 <b>Bem-vindo(a) ao Clube Home Office, {name}!</b>
 
-🧭 Explore o Clube Home Office e acesse rapidamente os conteúdos da comunidade:"""
+🧭 <b>Explore o Clube Home Office</b> e acesse rapidamente os conteúdos da comunidade:"""
 
 
 # ============================================================
@@ -387,17 +388,22 @@ async def run() -> int:
             member
         )
 
+        # Evita problemas com caracteres especiais
+        # no nome do membro.
+        safe_name = escape(name)
+
         # ====================================================
         # MENSAGEM ÚNICA COM BOAS-VINDAS + BOTÕES
         # ====================================================
 
         message = WELCOME_MESSAGE.format(
-            name=name
+            name=safe_name
         )
 
         await client.send_message_with_buttons(
             message,
             TOPIC_BUTTONS,
+            parse_mode="HTML",
         )
 
         print(
