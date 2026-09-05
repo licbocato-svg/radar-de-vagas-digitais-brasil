@@ -48,89 +48,12 @@ TOPIC_BUTTONS = [
 
 
 # ============================================================
-# MENSAGEM DE BOAS-VINDAS
+# MENSAGEM ÚNICA DE BOAS-VINDAS
 # ============================================================
 
-WELCOME = """*👋 BEM-VINDO(A) AO CLUBE HOME OFFICE!*
+WELCOME_MESSAGE = """👋 Bem-vindo(a) ao Clube Home Office, {name}!
 
-Olá, {name}! Seja muito bem-vindo(a)! 💙
-
-Este grupo é exclusivo para pessoas que desejam *trabalhar em casa, no conforto do seu lar, e/ou conquistar uma renda extra online*.
-
-Criamos esta comunidade para trocar experiências, compartilhar resultados, aprender, ajudar uns aos outros e crescer juntos, sempre com fé no nosso propósito. 🙏✨
-
-🎯 *PROPÓSITO DO GRUPO*
-
-Aqui você vai encontrar pessoas assim como você: pessoas que já trabalham em casa, estão procurando uma oportunidade de trabalho remoto ou desejam construir uma renda extra pela internet.
-
-Nosso objetivo é criar um ambiente de *apoio, aprendizado, networking e compartilhamento de oportunidades*, para que cada membro possa avançar em sua própria jornada.
-
-📌 *REGRAS DA COMUNIDADE*
-
-*1. RESPEITO SEMPRE EM PRIMEIRO LUGAR*
-
-Trate todos com educação, empatia e cordialidade. Brigas, discussões pessoais, ofensas ou ataques não serão tolerados.
-
-*2. PROIBIDO SPAM*
-
-Nada de mensagens repetitivas, correntes ou conteúdos fora de contexto. O grupo é para conteúdos que realmente agregam.
-
-*3. CONTEÚDO SAUDÁVEL E SEGURO*
-
-Não compartilhe conteúdo ofensivo, pornográfico, discriminatório ou excessivamente sensível.
-
-*Homofobia, preconceito ou intolerância de qualquer tipo resultarão em banimento.*
-
-*4. SEM POLÍTICA, RELIGIÃO OU FUTEBOL*
-
-Para manter o foco e evitar divisões, não serão permitidos debates sobre política, religião ou futebol.
-
-Nosso objetivo é preservar um ambiente *neutro, produtivo e acolhedor.*
-
-*5. SEM DIVULGAÇÃO EXTERNA*
-
-Não é permitida a divulgação de mentorias, cursos, grupos, consultorias ou produtos que não sejam da comunidade.
-
-A divulgação externa será tratada com rigor.
-
-*6. NADA DE VENDAS PESSOAIS*
-
-Este grupo não é espaço para oferecer produtos ou serviços próprios.
-
-O foco é *apoio, aprendizado e networking.*
-
-*7. PERGUNTAS APENAS POR ESCRITO*
-
-Evite enviar áudios.
-
-Escreva sua dúvida para que todos possam acompanhar, participar e contribuir com a resposta.
-
-*8. PROIBIDO CHAMAR NO PRIVADO*
-
-O grupo não é uma mentoria individual.
-
-É proibido chamar administradores ou membros no privado para solicitar atendimento, suporte ou orientação individual.
-
-🚨 *BANIMENTO PERMANENTE*
-
-*Quem desrespeitar qualquer regra será BANIDO PERMANENTEMENTE, sem aviso prévio!*
-
-💙 *Seja muito bem-vindo(a) ao Clube Home Office!*
-
-Participe, compartilhe suas experiências, ajude outros membros e aproveite a comunidade.
-
-*Estamos juntos nessa jornada! 🚀*"""
-
-
-# ============================================================
-# MENSAGEM DOS TÓPICOS
-# ============================================================
-
-TOPICS_MESSAGE = """🧭 *EXPLORE O CLUBE HOME OFFICE*
-
-Encontre rapidamente o conteúdo que você procura e aproveite todos os espaços da nossa comunidade.
-
-👇 *CLIQUE NO TÓPICO QUE DESEJA ACESSAR:*"""
+🧭 Explore o Clube Home Office e acesse rapidamente os conteúdos da comunidade:"""
 
 
 # ============================================================
@@ -230,7 +153,9 @@ def _save_last_update(
         encoding="utf-8",
     )
 
-    temporary.replace(path)
+    temporary.replace(
+        path
+    )
 
 
 # ============================================================
@@ -350,7 +275,7 @@ async def run() -> int:
 
         raise RuntimeError(
             "TELEGRAM_THREAD_ID deve ser 11 "
-            "para o tópico General."
+            "para o tópico Geral."
         )
 
     client = TelegramBotClient(
@@ -463,21 +388,15 @@ async def run() -> int:
         )
 
         # ====================================================
-        # PRIMEIRA MENSAGEM
+        # MENSAGEM ÚNICA COM BOAS-VINDAS + BOTÕES
         # ====================================================
 
-        await client.send_message(
-            WELCOME.format(
-                name=name
-            )
+        message = WELCOME_MESSAGE.format(
+            name=name
         )
 
-        # ====================================================
-        # SEGUNDA MENSAGEM COM BOTÕES
-        # ====================================================
-
         await client.send_message_with_buttons(
-            TOPICS_MESSAGE,
+            message,
             TOPIC_BUTTONS,
         )
 
