@@ -11,6 +11,7 @@ from radar_vagas.core.roles import matches_target_role
 from radar_vagas.storage.seen_jobs import (
     SeenJobStore,
     job_fingerprint,
+    legacy_job_fingerprint,
 )
 
 
@@ -36,6 +37,7 @@ class JobPipeline:
         self.seen_store = seen_store
 
     async def run(self) -> PipelineResult:
+
         collected: list[JobOpportunity] = []
 
         for collector in self.collectors:
@@ -70,33 +72,80 @@ class JobPipeline:
         ]
 
         unique_jobs: list[JobOpportunity] = []
+
         batch_fingerprints: set[str] = set()
 
         for job in brazil_eligible:
-            fingerprint = job_fingerprint(job)
 
-            if fingerprint in batch_fingerprints:
+            current_fingerprint = job_fingerprint(job)
+            legacy_fingerprint = legacy_job_fingerprint(job)
+
+            # ====================================================
+            # BLOQUEIA DUPLICAÇÃO NA MESMA EXECUÇÃO
+            # ====================================================
+
+            if (
+                current_fingerprint in batch_fingerprints
+                or legacy_fingerprint in batch_fingerprints
+            ):
                 continue
 
-            if self.seen_store.contains(fingerprint):
+            # ====================================================
+            # BLOQUEIA VAGA PUBLICADA NO HISTÓRICO ATUAL
+            # ====================================================
+
+            if self.seen_store.contains(
+                current_fingerprint
+            ):
                 print(
-                    f"[JÁ PUBLICADA] "
+                    f"[JÁ PUBLICADA] {job.title} | {job.company}"
+                )
+                print(f"  URL: {job.url}")
+                print(f"  Fonte: {job.source}")
+                print(
+                    f"  ID: {job.external_id or 'sem ID'}"
+                )
+                continue
+
+            # ====================================================
+            # BLOQUEIA VAGA PUBLICADA COM O SISTEMA ANTIGO
+            # ====================================================
+
+            if self.seen_store.contains(
+                legacy_fingerprint
+            ):
+                print(
+                    f"[JÁ PUBLICADA - HISTÓRICO ANTIGO] "
                     f"{job.title} | {job.company}"
                 )
                 print(f"  URL: {job.url}")
                 print(f"  Fonte: {job.source}")
-                print(f"  ID: {job.external_id or 'sem ID'}")
+                print(
+                    f"  ID: {job.external_id or 'sem ID'}"
+                )
                 continue
 
+            # ====================================================
+            # NOVA VAGA
+            # ====================================================
+
             print(
-                f"[NOVA VAGA] "
-                f"{job.title} | {job.company}"
+                f"[NOVA VAGA] {job.title} | {job.company}"
             )
             print(f"  URL: {job.url}")
             print(f"  Fonte: {job.source}")
-            print(f"  ID: {job.external_id or 'sem ID'}")
+            print(
+                f"  ID: {job.external_id or 'sem ID'}"
+            )
 
-            batch_fingerprints.add(fingerprint)
+            batch_fingerprints.add(
+                current_fingerprint
+            )
+
+            batch_fingerprints.add(
+                legacy_fingerprint
+            )
+
             unique_jobs.append(job)
 
         return PipelineResult(
