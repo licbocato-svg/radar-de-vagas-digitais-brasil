@@ -45,6 +45,12 @@ TOPIC_BUTTONS = [
             "url": "https://t.me/c/4314469021/7",
         },
     ],
+    [
+        {
+            "text": "🤝 Networking",
+            "url": "https://t.me/c/4314469021/133",
+        },
+    ],
 ]
 
 
