@@ -29,12 +29,7 @@ class SeenJobStore(Protocol):
 
 
 def canonicalize_url(url: str) -> str:
-    """
-    Normaliza a URL da vaga.
-
-    Remove parâmetros comuns de rastreamento para que
-    pequenas alterações na URL não criem uma nova vaga.
-    """
+    """Normaliza a URL da vaga."""
 
     parsed = urlsplit(url.strip())
 
@@ -45,11 +40,7 @@ def canonicalize_url(url: str) -> str:
             keep_blank_values=True,
         )
         if not key.casefold().startswith("utm_")
-        and key.casefold()
-        not in {
-            "ref",
-            "source",
-        }
+        and key.casefold() not in {"ref", "source"}
     ]
 
     path = parsed.path.rstrip("/") or "/"
@@ -67,31 +58,16 @@ def canonicalize_url(url: str) -> str:
 
 def job_fingerprint(job: JobOpportunity) -> str:
     """
-    Gera uma identidade estável para a vaga.
+    Fingerprint atual.
 
-    PRIORIDADE:
-
-    1. URL da vaga
-    2. ID da vaga na fonte
-    3. Conteúdo básico da vaga
-
-    A URL é usada primeiro porque é a identificação mais
-    estável para oportunidades publicadas em páginas de vagas.
+    A URL é a principal identidade da vaga.
     """
-
-    # ========================================================
-    # 1. URL DA VAGA
-    # ========================================================
 
     if job.url and job.url.strip():
         identity = (
             "url:"
             + canonicalize_url(job.url)
         )
-
-    # ========================================================
-    # 2. ID DA FONTE
-    # ========================================================
 
     elif job.external_id:
         identity = (
@@ -100,10 +76,6 @@ def job_fingerprint(job: JobOpportunity) -> str:
             + ":"
             + job.external_id.strip()
         )
-
-    # ========================================================
-    # 3. ÚLTIMO RECURSO
-    # ========================================================
 
     else:
         identity = "|".join(
@@ -116,6 +88,44 @@ def job_fingerprint(job: JobOpportunity) -> str:
         )
 
         identity = "content:" + identity
+
+    return hashlib.sha256(
+        identity.encode("utf-8")
+    ).hexdigest()
+
+
+def legacy_job_fingerprint(job: JobOpportunity) -> str:
+    """
+    Fingerprint usado pelas versões anteriores do Radar.
+
+    Mantido para reconhecer vagas que já foram publicadas
+    antes da atualização da deduplicação.
+    """
+
+    if job.external_id:
+        identity = (
+            f"source-id:"
+            f"{normalize_text(job.source)}:"
+            f"{job.external_id.strip()}"
+        )
+
+    elif job.url and job.url.strip():
+        identity = (
+            f"url:"
+            f"{canonicalize_url(job.url)}"
+        )
+
+    else:
+        identity = "|".join(
+            (
+                normalize_text(job.source),
+                normalize_text(job.title),
+                normalize_text(job.company),
+                normalize_text(job.location_text),
+            )
+        )
+
+        identity = f"content:{identity}"
 
     return hashlib.sha256(
         identity.encode("utf-8")
@@ -198,9 +208,7 @@ class JsonSeenJobStore:
             ) as file:
 
                 json.dump(
-                    sorted(
-                        self._fingerprints
-                    ),
+                    sorted(self._fingerprints),
                     file,
                     ensure_ascii=False,
                     indent=2,
@@ -214,7 +222,5 @@ class JsonSeenJobStore:
             )
 
         except Exception:
-            os.unlink(
-                temporary_path
-            )
+            os.unlink(temporary_path)
             raise
