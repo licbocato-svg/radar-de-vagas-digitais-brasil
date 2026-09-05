@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from html import escape
 
 from radar_vagas.config import Settings
 from radar_vagas.publishing.telegram import (
@@ -32,21 +33,21 @@ PRODUCTS = {
         "url": "https://pay.kiwify.com.br/NVpp2kM",
         "button": "🏠 CONHECER O GUIA HOME OFFICE",
         "messages": [
-            """💻 *QUER COMEÇAR A TRABALHAR DE CASA?*
+            """💻 <b>QUER COMEÇAR A TRABALHAR DE CASA?</b>
 
-O *Guia Home Office Internacional para Iniciantes* foi criado para quem quer conhecer melhor as possibilidades de trabalho remoto e as oportunidades internacionais.
+O <b>Guia Home Office Internacional para Iniciantes</b> foi criado para quem quer conhecer melhor as possibilidades de trabalho remoto e as oportunidades internacionais.
 
 Se você está dando os primeiros passos nesse universo, esse material pode te ajudar a entender melhor por onde começar.
 
-👇 *CONHEÇA O GUIA:*""",
+👇 <b>CONHEÇA O GUIA:</b>""",
 
-            """🌎 *TRABALHAR ONLINE PARA EMPRESAS INTERNACIONAIS*
+            """🌎 <b>TRABALHAR ONLINE PARA EMPRESAS INTERNACIONAIS</b>
 
 Pode parecer complicado no início, principalmente quando você não sabe quais caminhos existem.
 
-Por isso, reunimos em um único material informações para ajudar quem está começando no universo do *home office internacional*.
+Por isso, reunimos em um único material informações para ajudar quem está começando no universo do <b>home office internacional</b>.
 
-👇 *CONHEÇA O GUIA:*""",
+👇 <b>CONHEÇA O GUIA:</b>""",
         ],
     },
 
@@ -55,17 +56,17 @@ Por isso, reunimos em um único material informações para ajudar quem está co
         "url": "https://lp.quebreiodespertador.com/formula-hol",
         "button": "🚀 CONHECER A FÓRMULA HOL",
         "messages": [
-            """🚀 *QUER APRENDER UM CAMINHO MAIS COMPLETO PARA TRABALHAR DE CASA?*
+            """🚀 <b>QUER APRENDER UM CAMINHO MAIS COMPLETO PARA TRABALHAR DE CASA?</b>
 
-A *Fórmula HOL* é um treinamento para quem quer entender melhor as oportunidades de home office e desenvolver uma nova possibilidade de renda trabalhando online.
+A <b>Fórmula HOL</b> é um treinamento para quem quer entender melhor as oportunidades de home office e desenvolver uma nova possibilidade de renda trabalhando online.
 
-👇 *CONHEÇA A FÓRMULA HOL:*""",
+👇 <b>CONHEÇA A FÓRMULA HOL:</b>""",
 
-            """💡 *NÃO SABE POR ONDE COMEÇAR NO HOME OFFICE?*
+            """💡 <b>NÃO SABE POR ONDE COMEÇAR NO HOME OFFICE?</b>
 
-A *Fórmula HOL* reúne conhecimentos e estratégias para quem quer conhecer oportunidades e desenvolver sua trajetória trabalhando pela internet.
+A <b>Fórmula HOL</b> reúne conhecimentos e estratégias para quem quer conhecer oportunidades e desenvolver sua trajetória trabalhando pela internet.
 
-👇 *CONHEÇA O TREINAMENTO:*""",
+👇 <b>CONHEÇA O TREINAMENTO:</b>""",
         ],
     },
 
@@ -74,21 +75,21 @@ A *Fórmula HOL* reúne conhecimentos e estratégias para quem quer conhecer opo
         "url": "https://pay.kiwify.com.br/5valD5Y",
         "button": "🗺️ CONHECER O GUIA AVALIADOR DE MAPAS",
         "messages": [
-            """🗺️ *VOCÊ TEM CURIOSIDADE SOBRE O TRABALHO DE AVALIADOR DE MAPAS?*
+            """🗺️ <b>VOCÊ TEM CURIOSIDADE SOBRE O TRABALHO DE AVALIADOR DE MAPAS?</b>
 
 Essa é uma área que desperta muitas dúvidas: o que faz um avaliador, onde encontrar oportunidades e como funcionam esses projetos.
 
 Preparamos um material específico para quem quer conhecer melhor esse universo.
 
-👇 *CONHEÇA O GUIA:*""",
+👇 <b>CONHEÇA O GUIA:</b>""",
 
-            """📍 *GOOGLE MAPS, LOCALIZAÇÃO E AVALIAÇÃO DE RESULTADOS*
+            """📍 <b>GOOGLE MAPS, LOCALIZAÇÃO E AVALIAÇÃO DE RESULTADOS</b>
 
-Esses são alguns dos elementos presentes em projetos de *Avaliação de Mapas*.
+Esses são alguns dos elementos presentes em projetos de <b>Avaliação de Mapas</b>.
 
 Se você quer entender melhor como funciona essa área, temos um material específico sobre o assunto.
 
-👇 *CONHEÇA O GUIA AVALIADOR DE MAPAS:*""",
+👇 <b>CONHEÇA O GUIA AVALIADOR DE MAPAS:</b>""",
         ],
     },
 
@@ -97,19 +98,19 @@ Se você quer entender melhor como funciona essa área, temos um material espec�
         "url": "https://pay.kiwify.com.br/7JDByUZ",
         "button": "💻 CONHECER O GUIA AVALIADOR DIGITAL",
         "messages": [
-            """🤖 *QUER CONHECER O TRABALHO DE AVALIADOR DIGITAL?*
+            """🤖 <b>QUER CONHECER O TRABALHO DE AVALIADOR DIGITAL?</b>
 
 Essa área tem despertado cada vez mais interesse entre quem busca oportunidades de trabalho online.
 
 Antes de procurar vagas, é importante entender como esse universo funciona.
 
-👇 *CONHEÇA O GUIA:*""",
+👇 <b>CONHEÇA O GUIA:</b>""",
 
-            """📱 *JÁ OUVIU FALAR EM AVALIADOR DIGITAL?*
+            """📱 <b>JÁ OUVIU FALAR EM AVALIADOR DIGITAL?</b>
 
 Se você ainda não sabe exatamente como essa área funciona, preparamos um material para ajudar a conhecer os conceitos, oportunidades e caminhos desse mercado.
 
-👇 *CONHEÇA O GUIA AVALIADOR DIGITAL:*""",
+👇 <b>CONHEÇA O GUIA AVALIADOR DIGITAL:</b>""",
         ],
     },
 }
@@ -170,6 +171,7 @@ async def publish_product(
         await client.send_message_with_buttons(
             message,
             buttons,
+            parse_mode="HTML",
         )
 
     except (
