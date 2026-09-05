@@ -2,7 +2,9 @@ name: Radar de Vagas Automático
 
 on:
   schedule:
+    # Executa a cada hora
     - cron: "0 * * * *"
+
   workflow_dispatch:
 
 permissions:
@@ -13,38 +15,79 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # ============================================================
+      # BAIXAR O CÓDIGO
+      # ============================================================
+
       - name: Baixar codigo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+
+      # ============================================================
+      # CONFIGURAR PYTHON
+      # ============================================================
 
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+
+      # ============================================================
+      # EXECUTAR RADAR
+      # ============================================================
+
       - name: Executar radar de vagas
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
-        run: python -m radar_vagas
+
+        run: |
+          echo "=========================================="
+          echo "RADAR DE VAGAS DIGITAIS BRASIL"
+          echo "=========================================="
+          echo "Execução iniciada."
+          echo ""
+
+          python -m radar_vagas
+
+
+      # ============================================================
+      # SALVAR HISTÓRICO DAS VAGAS PUBLICADAS
+      # ============================================================
 
       - name: Salvar historico de vagas publicadas
         if: success()
+
         run: |
+
           if [ -f data/seen_jobs.json ]; then
+
+            echo "Atualizando historico de vagas..."
+
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
             git add -f data/seen_jobs.json
 
             if ! git diff --cached --quiet; then
+
               git commit -m "Atualizar historico de vagas publicadas"
+
               git push
+
             else
+
               echo "Nenhuma alteração no historico de vagas."
+
             fi
+
           else
+
             echo "Arquivo data/seen_jobs.json não foi criado."
+
           fi
