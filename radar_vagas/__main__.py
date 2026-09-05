@@ -24,21 +24,23 @@ from radar_vagas.storage.seen_jobs import (
 )
 
 
+# ============================================================
+# MATERIAIS
+# ============================================================
+
 MATERIALS = {
     "home-office": [
         """💻 Quer começar a trabalhar de casa, mas ainda se sente perdida sobre por onde começar?
 
 O Guia Home Office Internacional para Iniciantes foi criado para quem quer conhecer melhor as possibilidades de trabalho remoto e as oportunidades internacionais.
 
-👉 Conheça o guia:
-[https://pay.kiwify.com.br/NVpp2kM](https://pay.kiwify.com.br/NVpp2kM)""",
+👉 <b>CONHEÇA O GUIA:</b>""",
 
         """🌎 Trabalhar online para empresas internacionais pode parecer complicado no início.
 
 Por isso, reunimos em um único guia informações para ajudar quem está dando os primeiros passos no universo do home office internacional.
 
-📘 Conheça o Guia Home Office Internacional para Iniciantes:
-[https://pay.kiwify.com.br/NVpp2kM](https://pay.kiwify.com.br/NVpp2kM)""",
+📘 <b>CONHEÇA O GUIA HOME OFFICE INTERNACIONAL:</b>""",
     ],
 
     "formula-hol": [
@@ -46,15 +48,13 @@ Por isso, reunimos em um único guia informações para ajudar quem está dando 
 
 A Fórmula HOL é o treinamento para quem quer entender melhor as oportunidades de home office e construir uma nova possibilidade de renda trabalhando online.
 
-👉 Conheça a Fórmula HOL:
-[https://lp.quebreiodespertador.com/formula-hol](https://lp.quebreiodespertador.com/formula-hol)""",
+👉 <b>CONHEÇA A FÓRMULA HOL:</b>""",
 
         """💡 Muitas pessoas querem trabalhar de casa, mas não sabem quais caminhos seguir.
 
 A Fórmula HOL reúne conhecimentos e estratégias para quem quer buscar oportunidades e desenvolver sua trajetória no home office.
 
-🔗 Conheça o treinamento:
-[https://lp.quebreiodespertador.com/formula-hol](https://lp.quebreiodespertador.com/formula-hol)""",
+🔗 <b>CONHEÇA O TREINAMENTO:</b>""",
     ],
 
     "avaliador-mapas": [
@@ -62,15 +62,13 @@ A Fórmula HOL reúne conhecimentos e estratégias para quem quer buscar oportun
 
 Essa é uma área que desperta muitas dúvidas: o que faz, onde encontrar oportunidades e como entender os processos.
 
-📘 Para quem quer conhecer melhor esse universo:
-[https://pay.kiwify.com.br/5valD5Y](https://pay.kiwify.com.br/5valD5Y)""",
+📘 <b>CONHEÇA O GUIA:</b>""",
 
         """📍 Google Maps, localização e avaliação de resultados podem fazer parte de projetos de Avaliação de Mapas.
 
 Se você quer entender melhor como funciona essa área, temos um material específico sobre o assunto.
 
-👉 Conheça o Guia Avaliador de Mapas:
-[https://pay.kiwify.com.br/5valD5Y](https://pay.kiwify.com.br/5valD5Y)""",
+👉 <b>CONHEÇA O GUIA AVALIADOR DE MAPAS:</b>""",
     ],
 
     "avaliador-digital": [
@@ -78,27 +76,39 @@ Se você quer entender melhor como funciona essa área, temos um material espec�
 
 Mas antes de procurar vagas, é importante entender como funciona esse universo.
 
-📘 Conheça o Guia Completo de Formação de Avaliador Digital:
-[https://pay.kiwify.com.br/7JDByUZ](https://pay.kiwify.com.br/7JDByUZ)""",
+📘 <b>CONHEÇA O GUIA COMPLETO DE FORMAÇÃO DE AVALIADOR DIGITAL:</b>""",
 
         """📱 Já ouviu falar em Avaliador Digital, mas ainda não sabe exatamente como essa área funciona?
 
 Preparamos um guia para ajudar quem quer conhecer os conceitos, oportunidades e caminhos desse mercado.
 
-👉 Conheça o Guia Avaliador Digital:
-[https://pay.kiwify.com.br/7JDByUZ](https://pay.kiwify.com.br/7JDByUZ)""",
+👉 <b>CONHEÇA O GUIA AVALIADOR DIGITAL:</b>""",
     ],
 }
 
+
+# ============================================================
+# LINKS DOS MATERIAIS
+# ============================================================
+
+MATERIAL_URLS = {
+    "home-office": "https://pay.kiwify.com.br/NVpp2kM",
+    "formula-hol": "https://lp.quebreiodespertador.com/formula-hol",
+    "avaliador-mapas": "https://pay.kiwify.com.br/5valD5Y",
+    "avaliador-digital": "https://pay.kiwify.com.br/7JDByUZ",
+}
+
+
+# ============================================================
+# FORMATAÇÃO DA VAGA
+# ============================================================
 
 def format_job_message_html(
     job: JobOpportunity,
 ) -> str:
     """Monta a mensagem da vaga usando HTML seguro."""
 
-    title = escape(
-        str(job.title)
-    )
+    title = escape(str(job.title))
 
     try:
         roles = ", ".join(
@@ -111,29 +121,21 @@ def format_job_message_html(
     if not roles:
         roles = "Vaga digital"
 
-    roles = escape(
-        roles
-    )
+    roles = escape(roles)
 
     company = (
-        escape(
-            str(job.company)
-        )
+        escape(str(job.company))
         if job.company
         else None
     )
 
     location = (
-        escape(
-            str(job.location_text)
-        )
+        escape(str(job.location_text))
         if job.location_text
         else None
     )
 
-    source = escape(
-        str(job.source)
-    )
+    source = escape(str(job.source))
 
     lines = [
         f"<b>📢 {title}</b>",
@@ -160,10 +162,12 @@ def format_job_message_html(
         "👇 <b>ACESSE A OPORTUNIDADE:</b>"
     )
 
-    return "\n".join(
-        lines
-    )
+    return "\n".join(lines)
 
+
+# ============================================================
+# RADAR DE VAGAS
+# ============================================================
 
 async def _run() -> int:
 
@@ -173,43 +177,45 @@ async def _run() -> int:
         settings.data_dir / "seen_jobs.json"
     )
 
-    # ============================================================
+    # ========================================================
     # COLETORES
-    # ============================================================
+    # ========================================================
+
+    collectors = (
+        # ----------------------------------------------------
+        # LEVER
+        # ----------------------------------------------------
+
+        LeverCollector(
+            (
+                "tryjeeves",
+                "weloglobal",
+            )
+        ),
+
+        # ----------------------------------------------------
+        # GREENHOUSE
+        # ----------------------------------------------------
+
+        GreenhouseCollector(
+            (
+                "appen",
+                "telusinternational",
+                "welocalize",
+            )
+        ),
+    )
+
+    print("=" * 60)
+    print("RADAR DE VAGAS DIGITAIS BRASIL")
+    print("=" * 60)
+    print("Execução iniciada.")
+    print()
 
     result = await JobPipeline(
-        (
-            # ----------------------------------------------------
-            # LEVER
-            # ----------------------------------------------------
-
-            LeverCollector(
-                (
-                    "tryjeeves",
-                    "weloglobal",
-                )
-            ),
-
-            # ----------------------------------------------------
-            # GREENHOUSE
-            # ----------------------------------------------------
-
-            GreenhouseCollector(
-                (
-                    # Empresas com vagas públicas no Greenhouse.
-                    # A lista pode ser ampliada posteriormente.
-                    "appen",
-                    "telusinternational",
-                    "welocalize",
-                )
-            ),
-        ),
+        collectors,
         store,
     ).run()
-
-    print(
-        "Radar de Vagas Digitais Brasil"
-    )
 
     print(
         f"Vagas coletadas: "
@@ -233,6 +239,7 @@ async def _run() -> int:
 
     if not result.unique_jobs:
 
+        print()
         print(
             "Nenhuma vaga nova para publicar "
             "no Telegram."
@@ -240,18 +247,35 @@ async def _run() -> int:
 
         return 0
 
-    # ============================================================
-    # PUBLICA SOMENTE UMA VAGA POR EXECUÇÃO
-    # ============================================================
+    # ========================================================
+    # PUBLICA UMA VAGA POR EXECUÇÃO
+    #
+    # Como o GitHub Actions roda de hora em hora,
+    # cada execução pode publicar uma vaga diferente.
+    # ========================================================
 
     job = result.unique_jobs[0]
 
+    print()
     print(
         "Vaga selecionada para esta execução:"
     )
-
     print(
         f"  {job.title}"
+    )
+
+    if job.company:
+        print(
+            f"  Empresa: {job.company}"
+        )
+
+    if job.location_text:
+        print(
+            f"  Localização: {job.location_text}"
+        )
+
+    print(
+        f"  Fonte: {job.source}"
     )
 
     try:
@@ -275,9 +299,7 @@ async def _run() -> int:
                         "🔎 VER VAGA E "
                         "SE CANDIDATAR"
                     ),
-                    "url": str(
-                        job.url
-                    ),
+                    "url": str(job.url),
                 }
             ]
         ]
@@ -293,18 +315,17 @@ async def _run() -> int:
         )
 
         # ----------------------------------------------------
-        # SOMENTE DEPOIS DO ENVIO BEM-SUCEDIDO,
-        # REGISTRA A VAGA COMO PUBLICADA.
+        # SOMENTE DEPOIS DO ENVIO BEM-SUCEDIDO
+        # REGISTRA A VAGA COMO PUBLICADA
         # ----------------------------------------------------
 
-        fingerprint = job_fingerprint(
-            job
-        )
+        fingerprint = job_fingerprint(job)
 
         store.remember_many(
             [fingerprint]
         )
 
+        print()
         print(
             f"Vaga publicada com botão: "
             f"{job.title}"
@@ -327,12 +348,17 @@ async def _run() -> int:
 
         return 1
 
+    print()
     print(
         "Vagas publicadas no Telegram: 1"
     )
 
     return 0
 
+
+# ============================================================
+# VERIFICAR TELEGRAM
+# ============================================================
 
 async def _check_telegram() -> int:
 
@@ -358,9 +384,7 @@ async def _check_telegram() -> int:
 
         return 1
 
-    username = bot.get(
-        "username"
-    )
+    username = bot.get("username")
 
     if username:
 
@@ -381,6 +405,10 @@ async def _check_telegram() -> int:
 
     return 0
 
+
+# ============================================================
+# TESTE DO TELEGRAM
+# ============================================================
 
 async def _send_telegram_test() -> int:
 
@@ -418,17 +446,30 @@ async def _send_telegram_test() -> int:
     return 0
 
 
+# ============================================================
+# PUBLICAR MATERIAL
+# ============================================================
+
 async def _send_material(
     material: str,
     variation: int,
 ) -> int:
 
-    messages = MATERIALS[
-        material
-    ]
+    messages = MATERIALS[material]
 
     message = messages[
         variation % len(messages)
+    ]
+
+    url = MATERIAL_URLS[material]
+
+    buttons = [
+        [
+            {
+                "text": "🔗 ACESSAR MATERIAL",
+                "url": url,
+            }
+        ]
     ]
 
     try:
@@ -441,8 +482,10 @@ async def _send_material(
 
         await client.get_me()
 
-        await client.send_message(
-            message
+        await client.send_message_with_buttons(
+            message,
+            buttons,
+            parse_mode="HTML",
         )
 
     except (
@@ -464,6 +507,10 @@ async def _send_material(
 
     return 0
 
+
+# ============================================================
+# DESCOBRIR TÓPICO DO TELEGRAM
+# ============================================================
 
 async def _discover_telegram_topic(
     topic_name: str,
@@ -533,6 +580,10 @@ async def _discover_telegram_topic(
 
     return 0
 
+
+# ============================================================
+# CLI
+# ============================================================
 
 def main() -> int:
 
@@ -686,6 +737,10 @@ def main() -> int:
         _run()
     )
 
+
+# ============================================================
+# INICIALIZAÇÃO
+# ============================================================
 
 if __name__ == "__main__":
 
