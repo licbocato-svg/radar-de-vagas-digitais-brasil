@@ -2,14 +2,11 @@ name: Materiais e Conteúdos Automático
 
 on:
   schedule:
-    # 09:00 horário de Brasília
-    - cron: "0 12 * * *"
+    # 08:00 horário de Brasília
+    - cron: "0 11 * * *"
 
-    # 13:00 horário de Brasília
-    - cron: "0 16 * * *"
-
-    # 17:00 horário de Brasília
-    - cron: "0 20 * * *"
+    # 14:00 horário de Brasília
+    - cron: "0 17 * * *"
 
     # 20:00 horário de Brasília
     - cron: "0 23 * * *"
@@ -51,50 +48,62 @@ jobs:
 
             python -m radar_vagas.produtos_publisher \
               "${{ inputs.produto }}" \
-              --variation $(( $(date +%s) / 86400 % 2 ))
+              --variation $(( $(date -u +%s) / 86400 % 2 ))
 
           else
 
             HOUR=$(date -u +%H)
+            DAY=$(date -u +%j)
 
             echo "Horário UTC da execução: $HOUR"
+            echo "Dia do ano: $DAY"
 
-            if [ "$HOUR" = "12" ]; then
+            # Quatro produtos disponíveis.
+            PRODUCTS=(
+              "home-office"
+              "formula-hol"
+              "avaliador-mapas"
+              "avaliador-digital"
+            )
 
+            # Identifica qual dos 3 horários do dia está sendo executado.
+            if [ "$HOUR" = "11" ]; then
+              SLOT=0
+            elif [ "$HOUR" = "17" ]; then
+              SLOT=1
+            elif [ "$HOUR" = "23" ]; then
+              SLOT=2
+            else
+              echo "Horário sem publicação configurada."
+              exit 0
+            fi
+
+            # Faz a sequência continuar de um dia para o outro.
+            #
+            # Cada dia possui 3 publicações.
+            # Como existem 4 produtos, o próximo produto
+            # continua a partir de onde o dia anterior terminou.
+            INDEX=$(( ((DAY - 1) * 3 + SLOT) % 4 ))
+
+            PRODUTO="${PRODUCTS[$INDEX]}"
+
+            echo "Produto selecionado automaticamente: $PRODUTO"
+
+            if [ "$PRODUTO" = "home-office" ]; then
               echo "Publicando: Guia Home Office Internacional"
 
-              python -m radar_vagas.produtos_publisher \
-                home-office \
-                --variation $(( $(date +%s) / 86400 % 2 ))
-
-            elif [ "$HOUR" = "16" ]; then
-
+            elif [ "$PRODUTO" = "formula-hol" ]; then
               echo "Publicando: Fórmula HOL"
 
-              python -m radar_vagas.produtos_publisher \
-                formula-hol \
-                --variation $(( $(date +%s) / 86400 % 2 ))
-
-            elif [ "$HOUR" = "20" ]; then
-
+            elif [ "$PRODUTO" = "avaliador-mapas" ]; then
               echo "Publicando: Guia Avaliador de Mapas"
 
-              python -m radar_vagas.produtos_publisher \
-                avaliador-mapas \
-                --variation $(( $(date +%s) / 86400 % 2 ))
-
-            elif [ "$HOUR" = "23" ]; then
-
+            elif [ "$PRODUTO" = "avaliador-digital" ]; then
               echo "Publicando: Guia Avaliador Digital"
-
-              python -m radar_vagas.produtos_publisher \
-                avaliador-digital \
-                --variation $(( $(date +%s) / 86400 % 2 ))
-
-            else
-
-              echo "Horário sem publicação configurada."
-
             fi
+
+            python -m radar_vagas.produtos_publisher \
+              "$PRODUTO" \
+              --variation $(( $(date -u +%s) / 86400 % 2 ))
 
           fi
