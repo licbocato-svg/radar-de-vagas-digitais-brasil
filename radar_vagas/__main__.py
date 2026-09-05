@@ -6,6 +6,7 @@ import argparse
 import asyncio
 from html import escape
 
+from radar_vagas.collectors.greenhouse import GreenhouseCollector
 from radar_vagas.collectors.lever import LeverCollector
 from radar_vagas.config import Settings
 from radar_vagas.core.models import JobOpportunity
@@ -30,14 +31,14 @@ MATERIALS = {
 O Guia Home Office Internacional para Iniciantes foi criado para quem quer conhecer melhor as possibilidades de trabalho remoto e as oportunidades internacionais.
 
 👉 Conheça o guia:
-https://pay.kiwify.com.br/NVpp2kM""",
+[https://pay.kiwify.com.br/NVpp2kM](https://pay.kiwify.com.br/NVpp2kM)""",
 
         """🌎 Trabalhar online para empresas internacionais pode parecer complicado no início.
 
 Por isso, reunimos em um único guia informações para ajudar quem está dando os primeiros passos no universo do home office internacional.
 
 📘 Conheça o Guia Home Office Internacional para Iniciantes:
-https://pay.kiwify.com.br/NVpp2kM""",
+[https://pay.kiwify.com.br/NVpp2kM](https://pay.kiwify.com.br/NVpp2kM)""",
     ],
 
     "formula-hol": [
@@ -46,14 +47,14 @@ https://pay.kiwify.com.br/NVpp2kM""",
 A Fórmula HOL é o treinamento para quem quer entender melhor as oportunidades de home office e construir uma nova possibilidade de renda trabalhando online.
 
 👉 Conheça a Fórmula HOL:
-https://lp.quebreiodespertador.com/formula-hol""",
+[https://lp.quebreiodespertador.com/formula-hol](https://lp.quebreiodespertador.com/formula-hol)""",
 
         """💡 Muitas pessoas querem trabalhar de casa, mas não sabem quais caminhos seguir.
 
 A Fórmula HOL reúne conhecimentos e estratégias para quem quer buscar oportunidades e desenvolver sua trajetória no home office.
 
 🔗 Conheça o treinamento:
-https://lp.quebreiodespertador.com/formula-hol""",
+[https://lp.quebreiodespertador.com/formula-hol](https://lp.quebreiodespertador.com/formula-hol)""",
     ],
 
     "avaliador-mapas": [
@@ -62,14 +63,14 @@ https://lp.quebreiodespertador.com/formula-hol""",
 Essa é uma área que desperta muitas dúvidas: o que faz, onde encontrar oportunidades e como entender os processos.
 
 📘 Para quem quer conhecer melhor esse universo:
-https://pay.kiwify.com.br/5valD5Y""",
+[https://pay.kiwify.com.br/5valD5Y](https://pay.kiwify.com.br/5valD5Y)""",
 
         """📍 Google Maps, localização e avaliação de resultados podem fazer parte de projetos de Avaliação de Mapas.
 
 Se você quer entender melhor como funciona essa área, temos um material específico sobre o assunto.
 
 👉 Conheça o Guia Avaliador de Mapas:
-https://pay.kiwify.com.br/5valD5Y""",
+[https://pay.kiwify.com.br/5valD5Y](https://pay.kiwify.com.br/5valD5Y)""",
     ],
 
     "avaliador-digital": [
@@ -78,14 +79,14 @@ https://pay.kiwify.com.br/5valD5Y""",
 Mas antes de procurar vagas, é importante entender como funciona esse universo.
 
 📘 Conheça o Guia Completo de Formação de Avaliador Digital:
-https://pay.kiwify.com.br/7JDByUZ""",
+[https://pay.kiwify.com.br/7JDByUZ](https://pay.kiwify.com.br/7JDByUZ)""",
 
         """📱 Já ouviu falar em Avaliador Digital, mas ainda não sabe exatamente como essa área funciona?
 
 Preparamos um guia para ajudar quem quer conhecer os conceitos, oportunidades e caminhos desse mercado.
 
 👉 Conheça o Guia Avaliador Digital:
-https://pay.kiwify.com.br/7JDByUZ""",
+[https://pay.kiwify.com.br/7JDByUZ](https://pay.kiwify.com.br/7JDByUZ)""",
     ],
 }
 
@@ -172,12 +173,34 @@ async def _run() -> int:
         settings.data_dir / "seen_jobs.json"
     )
 
+    # ============================================================
+    # COLETORES
+    # ============================================================
+
     result = await JobPipeline(
         (
+            # ----------------------------------------------------
+            # LEVER
+            # ----------------------------------------------------
+
             LeverCollector(
                 (
                     "tryjeeves",
                     "weloglobal",
+                )
+            ),
+
+            # ----------------------------------------------------
+            # GREENHOUSE
+            # ----------------------------------------------------
+
+            GreenhouseCollector(
+                (
+                    # Empresas com vagas públicas no Greenhouse.
+                    # A lista pode ser ampliada posteriormente.
+                    "appen",
+                    "telusinternational",
+                    "welocalize",
                 )
             ),
         ),
@@ -217,9 +240,9 @@ async def _run() -> int:
 
         return 0
 
-    # ========================================================
+    # ============================================================
     # PUBLICA SOMENTE UMA VAGA POR EXECUÇÃO
-    # ========================================================
+    # ============================================================
 
     job = result.unique_jobs[0]
 
