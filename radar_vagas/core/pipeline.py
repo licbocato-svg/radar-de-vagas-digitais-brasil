@@ -44,20 +44,27 @@ class JobPipeline:
         # ========================================================
 
         for collector in self.collectors:
+            collector_name = getattr(
+                collector,
+                "name",
+                collector.__class__.__name__,
+            )
+
             try:
                 jobs = await collector.collect()
 
                 print(
-                    f"[COLETOR] {collector.name}: "
+                    f"[COLETOR] {collector_name}: "
                     f"{len(jobs)} vagas coletadas"
                 )
 
                 collected.extend(jobs)
 
             except Exception as error:
+
                 print(
                     f"[ERRO] Falha no coletor "
-                    f"{collector.name}: {error}"
+                    f"{collector_name}: {error}"
                 )
 
         # ========================================================
@@ -110,7 +117,9 @@ class JobPipeline:
             # JÁ PUBLICADA EM EXECUÇÃO ANTERIOR
             # ----------------------------------------------------
 
-            if self.seen_store.contains(fingerprint):
+            if self.seen_store.contains(
+                fingerprint
+            ):
 
                 print(
                     "[JÁ PUBLICADA] "
@@ -127,7 +136,8 @@ class JobPipeline:
                 )
 
                 print(
-                    f"  ID: {job.external_id or 'sem ID'}"
+                    f"  ID: "
+                    f"{job.external_id or 'sem ID'}"
                 )
 
                 continue
@@ -136,9 +146,13 @@ class JobPipeline:
             # NOVA VAGA
             # ----------------------------------------------------
 
-            batch_fingerprints.add(fingerprint)
+            batch_fingerprints.add(
+                fingerprint
+            )
 
-            unique_jobs.append(job)
+            unique_jobs.append(
+                job
+            )
 
             print(
                 "[NOVA VAGA] "
@@ -155,7 +169,8 @@ class JobPipeline:
             )
 
             print(
-                f"  ID: {job.external_id or 'sem ID'}"
+                f"  ID: "
+                f"{job.external_id or 'sem ID'}"
             )
 
         # ========================================================
