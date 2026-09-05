@@ -16,7 +16,7 @@ from radar_vagas.core.roles import normalize_text
 
 
 class SeenJobStore(Protocol):
-    """Interface para trocar o JSON por outro armazenamento no futuro."""
+    """Interface para armazenamento de vagas já publicadas."""
 
     def contains(self, fingerprint: str) -> bool:
         ...
@@ -28,14 +28,15 @@ class SeenJobStore(Protocol):
         ...
 
 
-def canonicalize_url(
-    url: str,
-) -> str:
-    """Remove ruído comum de tracking antes de gerar o fingerprint."""
+def canonicalize_url(url: str) -> str:
+    """
+    Normaliza a URL da vaga.
 
-    parsed = urlsplit(
-        url.strip()
-    )
+    Remove parâmetros comuns de rastreamento para que
+    pequenas alterações na URL não criem uma nova vaga.
+    """
+
+    parsed = urlsplit(url.strip())
 
     query = [
         (key, value)
@@ -51,10 +52,7 @@ def canonicalize_url(
         }
     ]
 
-    path = (
-        parsed.path.rstrip("/")
-        or "/"
-    )
+    path = parsed.path.rstrip("/") or "/"
 
     return urlunsplit(
         (
@@ -67,67 +65,57 @@ def canonicalize_url(
     )
 
 
-def job_fingerprint(
-    job: JobOpportunity,
-) -> str:
+def job_fingerprint(job: JobOpportunity) -> str:
     """
     Gera uma identidade estável para a vaga.
 
-    Quando a fonte fornece um external_id, ele é utilizado
-    como identificador principal. Isso evita que alterações
-    na URL façam a mesma vaga parecer uma oportunidade nova.
+    PRIORIDADE:
 
-    Se não houver external_id, utiliza a URL.
-    Se também não houver URL, utiliza os dados normalizados
-    da própria vaga.
+    1. URL da vaga
+    2. ID da vaga na fonte
+    3. Conteúdo básico da vaga
+
+    A URL é usada primeiro porque é a identificação mais
+    estável para oportunidades publicadas em páginas de vagas.
     """
 
     # ========================================================
-    # 1. ID ÚNICO DA FONTE
+    # 1. URL DA VAGA
     # ========================================================
 
-    if job.external_id:
+    if job.url and job.url.strip():
         identity = (
-            f"source-id:"
-            f"{normalize_text(job.source)}:"
-            f"{job.external_id.strip()}"
+            "url:"
+            + canonicalize_url(job.url)
         )
 
     # ========================================================
-    # 2. URL COMO SEGUNDA OPÇÃO
+    # 2. ID DA FONTE
     # ========================================================
 
-    elif job.url.strip():
+    elif job.external_id:
         identity = (
-            f"url:"
-            f"{canonicalize_url(job.url)}"
+            "source-id:"
+            + normalize_text(job.source)
+            + ":"
+            + job.external_id.strip()
         )
 
     # ========================================================
-    # 3. CONTEÚDO COMO ÚLTIMO RECURSO
+    # 3. ÚLTIMO RECURSO
     # ========================================================
 
     else:
         identity = "|".join(
             (
-                normalize_text(
-                    job.source
-                ),
-                normalize_text(
-                    job.title
-                ),
-                normalize_text(
-                    job.company
-                ),
-                normalize_text(
-                    job.location_text
-                ),
+                normalize_text(job.source),
+                normalize_text(job.title),
+                normalize_text(job.company),
+                normalize_text(job.location_text),
             )
         )
 
-        identity = (
-            f"content:{identity}"
-        )
+        identity = "content:" + identity
 
     return hashlib.sha256(
         identity.encode("utf-8")
@@ -141,16 +129,10 @@ class JsonSeenJobStore:
         self,
         path: Path,
     ) -> None:
-
         self.path = path
-        self._fingerprints = (
-            self._load()
-        )
+        self._fingerprints = self._load()
 
-    def _load(
-        self,
-    ) -> set[str]:
-
+    def _load(self) -> set[str]:
         if not self.path.exists():
             return set()
 
@@ -158,43 +140,27 @@ class JsonSeenJobStore:
             "r",
             encoding="utf-8",
         ) as file:
-
-            payload = json.load(
-                file
-            )
+            payload = json.load(file)
 
         if (
-            not isinstance(
-                payload,
-                list,
-            )
+            not isinstance(payload, list)
             or not all(
-                isinstance(
-                    item,
-                    str,
-                )
+                isinstance(item, str)
                 for item in payload
             )
         ):
-
             raise ValueError(
                 "Formato inválido no armazenamento "
                 f"de vagas: {self.path}"
             )
 
-        return set(
-            payload
-        )
+        return set(payload)
 
     def contains(
         self,
         fingerprint: str,
     ) -> bool:
-
-        return (
-            fingerprint
-            in self._fingerprints
-        )
+        return fingerprint in self._fingerprints
 
     def remember_many(
         self,
@@ -218,16 +184,13 @@ class JsonSeenJobStore:
             exist_ok=True,
         )
 
-        descriptor, temporary_path = (
-            tempfile.mkstemp(
-                prefix=f".{self.path.name}.",
-                dir=self.path.parent,
-                text=True,
-            )
+        descriptor, temporary_path = tempfile.mkstemp(
+            prefix=f".{self.path.name}.",
+            dir=self.path.parent,
+            text=True,
         )
 
         try:
-
             with os.fdopen(
                 descriptor,
                 "w",
@@ -243,9 +206,7 @@ class JsonSeenJobStore:
                     indent=2,
                 )
 
-                file.write(
-                    "\n"
-                )
+                file.write("\n")
 
             os.replace(
                 temporary_path,
@@ -253,9 +214,7 @@ class JsonSeenJobStore:
             )
 
         except Exception:
-
             os.unlink(
                 temporary_path
             )
-
             raise
