@@ -21,6 +21,11 @@ BRAZIL_MARKERS = frozenset(
         "portuguese (brazil)",
         "pt-br",
         "pt br",
+        "brazil remote",
+        "remote brazil",
+        "remote - brazil",
+        "remote – brazil",
+        "remote, brazil",
         "sao paulo",
         "são paulo",
         "rio de janeiro",
@@ -48,10 +53,15 @@ GLOBAL_MARKERS = frozenset(
         "work from anywhere",
         "work-from-anywhere",
         "all countries",
+        "all locations",
         "international",
         "internationally",
         "global remote",
         "remote worldwide",
+        "remote global",
+        "remote anywhere",
+        "worldwide remote",
+        "work anywhere",
     }
 )
 
@@ -63,17 +73,22 @@ GLOBAL_MARKERS = frozenset(
 BRAZIL_COMPATIBLE_REGIONS = frozenset(
     {
         "latin america",
+        "latin-america",
         "latam",
+        "latam region",
+        "latin america region",
         "south america",
+        "south-america",
         "south american",
         "americas",
-        "america",
         "the americas",
+        "america",
         "central and south america",
         "central america and south america",
         "latin america and the caribbean",
+        "latin america & caribbean",
         "latam region",
-        "latin america region",
+        "americas region",
         "south america region",
     }
 )
@@ -93,6 +108,10 @@ REMOTE_MARKERS = frozenset(
         "work from home",
         "home office",
         "distributed",
+        "remote position",
+        "remote role",
+        "remote job",
+        "remote opportunity",
     }
 )
 
@@ -120,8 +139,11 @@ EXCLUSION_MARKERS = frozenset(
         "european union only",
         "eu only",
         "australia only",
+        "australia residents only",
         "new zealand only",
+        "new zealand residents only",
         "asia only",
+        "asia residents only",
     }
 )
 
@@ -132,13 +154,10 @@ def _contains_marker(
 ) -> bool:
     """Verifica se algum marcador aparece no texto normalizado."""
 
-    normalized = normalize_text(
-        value
-    )
+    normalized = normalize_text(value)
 
     return any(
-        normalize_text(marker)
-        in normalized
+        normalize_text(marker) in normalized
         for marker in markers
     )
 
@@ -146,7 +165,7 @@ def _contains_marker(
 def _job_text(
     job: JobOpportunity,
 ) -> str:
-    """Combina as informações geográficas disponíveis na vaga."""
+    """Combina todas as informações geográficas disponíveis na vaga."""
 
     parts = [
         job.location_text,
@@ -167,25 +186,29 @@ def eligible_for_brazil(
     Decide se uma oportunidade pode ser publicada
     para pessoas que estão no Brasil.
 
-    A prioridade é:
+    Ordem de decisão:
 
-    1. Restrições explícitas → rejeita.
-    2. Brasil → aceita.
-    3. Região compatível com Brasil → aceita.
-    4. Contratação global/internacional → aceita.
-    5. Remote sem região → permanece inconclusiva.
+    1. Restrição geográfica explícita -> rejeita.
+    2. Brasil -> aceita.
+    3. América Latina / América do Sul / Américas -> aceita.
+    4. Global / internacional -> aceita.
+    5. Remote sem região -> aceita somente quando
+       a própria vaga não apresenta uma restrição.
+    6. Informação insuficiente -> rejeita.
     """
 
-    location_text = _job_text(
-        job
+    location_text = _job_text(job)
+
+    normalized_location = normalize_text(
+        location_text
     )
 
     # --------------------------------------------------------
-    # 1. RESTRIÇÃO EXPLÍCITA
+    # 1. RESTRIÇÕES EXPLÍCITAS
     # --------------------------------------------------------
 
     if _contains_marker(
-        location_text,
+        normalized_location,
         EXCLUSION_MARKERS,
     ):
         return False
@@ -195,17 +218,17 @@ def eligible_for_brazil(
     # --------------------------------------------------------
 
     if _contains_marker(
-        location_text,
+        normalized_location,
         BRAZIL_MARKERS,
     ):
         return True
 
     # --------------------------------------------------------
-    # 3. AMÉRICA LATINA / AMÉRICA DO SUL
+    # 3. AMÉRICA LATINA / AMÉRICA DO SUL / AMÉRICAS
     # --------------------------------------------------------
 
     if _contains_marker(
-        location_text,
+        normalized_location,
         BRAZIL_COMPATIBLE_REGIONS,
     ):
         return True
@@ -215,26 +238,28 @@ def eligible_for_brazil(
     # --------------------------------------------------------
 
     if _contains_marker(
-        location_text,
+        normalized_location,
         GLOBAL_MARKERS,
     ):
         return True
 
     # --------------------------------------------------------
-    # 5. REMOTO SEM REGIÃO DEFINIDA
+    # 5. REMOTO SEM RESTRIÇÃO GEOGRÁFICA
     # --------------------------------------------------------
     #
-    # "Remote" sozinho não garante que brasileiros
-    # possam se candidatar.
+    # Se a fonte informa que a vaga é remota, mas não
+    # apresenta uma restrição geográfica, consideramos
+    # potencialmente elegível para brasileiros.
     #
-    # Por isso, continuamos conservadores aqui.
+    # A existência de uma restrição explícita já foi
+    # verificada acima.
     # --------------------------------------------------------
 
     if _contains_marker(
-        location_text,
+        normalized_location,
         REMOTE_MARKERS,
     ):
-        return False
+        return True
 
     # --------------------------------------------------------
     # 6. INFORMAÇÃO INSUFICIENTE
