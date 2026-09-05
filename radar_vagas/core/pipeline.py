@@ -32,7 +32,6 @@ class JobPipeline:
         collectors: tuple[JobCollector, ...],
         seen_store: SeenJobStore,
     ) -> None:
-
         self.collectors = collectors
         self.seen_store = seen_store
 
@@ -40,11 +39,30 @@ class JobPipeline:
 
         collected: list[JobOpportunity] = []
 
-        for collector in self.collectors:
+        # ========================================================
+        # 1. COLETA
+        # ========================================================
 
-            collected.extend(
-                await collector.collect()
-            )
+        for collector in self.collectors:
+            try:
+                jobs = await collector.collect()
+
+                print(
+                    f"[COLETOR] {collector.name}: "
+                    f"{len(jobs)} vagas coletadas"
+                )
+
+                collected.extend(jobs)
+
+            except Exception as error:
+                print(
+                    f"[ERRO] Falha no coletor "
+                    f"{collector.name}: {error}"
+                )
+
+        # ========================================================
+        # 2. FILTRO POR CARGO
+        # ========================================================
 
         role_matches = [
             job
@@ -52,11 +70,19 @@ class JobPipeline:
             if matches_target_role(job)
         ]
 
+        # ========================================================
+        # 3. FILTRO DE ELEGIBILIDADE PARA O BRASIL
+        # ========================================================
+
         brazil_eligible = [
             job
             for job in role_matches
             if eligible_for_brazil(job)
         ]
+
+        # ========================================================
+        # 4. DEDUPLICAÇÃO
+        # ========================================================
 
         unique_jobs: list[JobOpportunity] = []
 
@@ -64,37 +90,81 @@ class JobPipeline:
 
         for job in brazil_eligible:
 
-            fingerprint = job_fingerprint(
-                job
-            )
+            fingerprint = job_fingerprint(job)
+
+            # ----------------------------------------------------
+            # DUPLICADA DENTRO DA MESMA EXECUÇÃO
+            # ----------------------------------------------------
 
             if fingerprint in batch_fingerprints:
+
+                print(
+                    "[DUPLICADA NA EXECUÇÃO] "
+                    f"{job.title} | "
+                    f"{job.company}"
+                )
+
                 continue
 
-            if self.seen_store.contains(
-                fingerprint
-            ):
+            # ----------------------------------------------------
+            # JÁ PUBLICADA EM EXECUÇÃO ANTERIOR
+            # ----------------------------------------------------
+
+            if self.seen_store.contains(fingerprint):
+
+                print(
+                    "[JÁ PUBLICADA] "
+                    f"{job.title} | "
+                    f"{job.company}"
+                )
+
+                print(
+                    f"  URL: {job.url}"
+                )
+
+                print(
+                    f"  Fonte: {job.source}"
+                )
+
+                print(
+                    f"  ID: {job.external_id or 'sem ID'}"
+                )
+
                 continue
 
-            batch_fingerprints.add(
-                fingerprint
+            # ----------------------------------------------------
+            # NOVA VAGA
+            # ----------------------------------------------------
+
+            batch_fingerprints.add(fingerprint)
+
+            unique_jobs.append(job)
+
+            print(
+                "[NOVA VAGA] "
+                f"{job.title} | "
+                f"{job.company}"
             )
 
-            unique_jobs.append(
-                job
+            print(
+                f"  URL: {job.url}"
             )
+
+            print(
+                f"  Fonte: {job.source}"
+            )
+
+            print(
+                f"  ID: {job.external_id or 'sem ID'}"
+            )
+
+        # ========================================================
+        # RESULTADO
+        # ========================================================
 
         return PipelineResult(
-            collected_count=len(
-                collected
-            ),
-            role_matches_count=len(
-                role_matches
-            ),
-            brazil_eligible_count=len(
-                brazil_eligible
-            ),
-            unique_jobs=tuple(
-                unique_jobs
-            ),
+            collected_count=len(collected),
+            role_matches_count=len(role_matches),
+            brazil_eligible_count=len(brazil_eligible),
+            unique_jobs=tuple(unique_jobs),
         )
